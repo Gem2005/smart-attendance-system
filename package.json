@@ -1,0 +1,15 @@
+{
+  "name": "smart-attendance-system",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:mobile": "pnpm --filter mobile start",
+    "build:web": "pnpm --filter web build",
+    "lint": "pnpm -r lint",
+    "db:migrate": "pnpm --filter supabase migrate",
+    "db:types": "pnpm --filter supabase generate-types"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
