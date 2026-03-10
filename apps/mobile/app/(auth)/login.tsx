@@ -9,22 +9,31 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/auth";
 
+const STUDENT_EMAIL_DOMAIN = "students.attendance.local";
+
 export default function LoginScreen() {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
 
   async function handleLogin() {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter email and password");
+    if (!identifier || !password) {
+      Alert.alert("Error", "Please enter your roll number/email and password");
       return;
     }
 
     setLoading(true);
     try {
+      // If identifier contains @, treat as email; otherwise convert rollno to email
+      const email = identifier.includes("@")
+        ? identifier
+        : `${identifier}@${STUDENT_EMAIL_DOMAIN}`;
+
       await signIn(email, password);
     } catch (error: any) {
       Alert.alert("Login Failed", error.message);
@@ -39,36 +48,90 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.inner}>
-        <Text style={styles.title}>Smart Attendance</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
+        {/* Logo & Header */}
+        <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="finger-print" size={36} color="#fff" />
+          </View>
+          <Text style={styles.title}>Smart Attendance</Text>
+          <Text style={styles.subtitle}>
+            Sign in with your roll number or email
+          </Text>
+        </View>
 
+        {/* Form */}
         <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Roll Number / Email</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="id-card-outline"
+                size={20}
+                color="#8e8ea0"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. CS2024001 or email"
+                placeholderTextColor="#8e8ea0"
+                value={identifier}
+                onChangeText={setIdentifier}
+                autoCapitalize="none"
+                keyboardType="default"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color="#8e8ea0"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Enter your password"
+                placeholderTextColor="#8e8ea0"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="#8e8ea0"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={loading}
+            activeOpacity={0.8}
           >
             <Text style={styles.buttonText}>
               {loading ? "Signing in..." : "Sign In"}
             </Text>
           </TouchableOpacity>
+
+
+        </View>
+
+        {/* Footer hint */}
+        <View style={styles.footer}>
+          <Ionicons name="information-circle-outline" size={16} color="#9ca3af" />
+          <Text style={styles.footerText}>
+            First-time login? Your password is your roll number.
+          </Text>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -78,49 +141,113 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#f8f9fa",
   },
   inner: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  iconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: "#4f46e5",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    shadowColor: "#4f46e5",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 8,
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#1a1a2e",
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#666",
+    fontSize: 15,
+    color: "#6b7280",
+    marginTop: 8,
     textAlign: "center",
-    marginBottom: 48,
   },
   form: {
-    gap: 16,
+    gap: 18,
+  },
+  inputGroup: {
+    gap: 6,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#e5e7eb",
+    paddingHorizontal: 14,
+    height: 54,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    padding: 16,
+    flex: 1,
     fontSize: 16,
-    backgroundColor: "#f9f9f9",
+    color: "#1a1a2e",
+  },
+  eyeButton: {
+    padding: 4,
   },
   button: {
-    backgroundColor: "#2f95dc",
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: "#4f46e5",
+    borderRadius: 14,
+    height: 54,
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
+    shadowColor: "#4f46e5",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 32,
+    paddingHorizontal: 16,
+  },
+  footerText: {
+    fontSize: 13,
+    color: "#9ca3af",
   },
 });

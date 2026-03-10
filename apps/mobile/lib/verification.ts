@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 import { getCurrentGPS, isWithinGeofence } from "./location";
 import { scanNearbyWifi, matchWifiSSID } from "./wifi";
 
-type StepStatus = "pending" | "checking" | "passed" | "failed";
+type StepStatus = "pending" | "checking" | "passed" | "failed" | "skipped";
 
 export interface VerificationState {
   qr: StepStatus;
@@ -61,6 +61,8 @@ async function checkTiming(classId: string): Promise<void> {
 
 /**
  * Full verification flow — returns data for attendance submission.
+ * Geofence and WiFi checks are reference parameters — they are recorded
+ * but do not block attendance marking.
  */
 export async function runVerification(
   payload: QRPayload,
@@ -74,82 +76,100 @@ export async function runVerification(
     photo: "pending",
   };
 
-  // Step 1: QR validation
+  // Step 1: QR validation (mandatory)
   state.qr = "checking";
   onStep({ ...state });
   await validateQR(payload);
   state.qr = "passed";
   onStep({ ...state });
 
-  // Step 2: Timing check
+  // Step 2: Timing check (mandatory)
   state.timing = "checking";
   onStep({ ...state });
   await checkTiming(payload.cid);
   state.timing = "passed";
   onStep({ ...state });
 
-  // Step 3: Geofence check
+  // Step 3: Geofence check (reference only — does not block)
   state.geofence = "checking";
   onStep({ ...state });
-  const gps = await getCurrentGPS();
 
-  const { data: classLocation, error: locError } = await supabase
-    .from("class_locations")
-    .select("latitude, longitude, radius_meters")
-    .eq("class_id", payload.cid)
-    .single();
+  let gpsLatitude = 0;
+  let gpsLongitude = 0;
+  let geofencePassed = false;
 
-  if (locError || !classLocation) {
-    throw new Error("Failed to fetch class location");
+  try {
+    const gps = await getCurrentGPS();
+    gpsLatitude = gps.latitude;
+    gpsLongitude = gps.longitude;
+
+    const { data: classLocation } = await supabase
+      .from("class_locations")
+      .select("latitude, longitude, radius_meters")
+      .eq("class_id", payload.cid)
+      .single();
+
+    if (classLocation) {
+      geofencePassed = isWithinGeofence(
+        gps,
+        { latitude: classLocation.latitude, longitude: classLocation.longitude },
+        classLocation.radius_meters
+      );
+      state.geofence = geofencePassed ? "passed" : "failed";
+    } else {
+      // No location configured — skip
+      state.geofence = "skipped";
+    }
+  } catch {
+    // GPS failed — record as failed but don't block
+    state.geofence = "failed";
   }
-
-  const geofencePassed = isWithinGeofence(
-    gps,
-    { latitude: classLocation.latitude, longitude: classLocation.longitude },
-    classLocation.radius_meters
-  );
-
-  if (!geofencePassed) {
-    throw new Error("You are not near the classroom");
-  }
-  state.geofence = "passed";
   onStep({ ...state });
 
-  // Step 4: WiFi check
+  // Step 4: WiFi check (reference only — does not block)
   state.wifi = "checking";
   onStep({ ...state });
 
-  const { data: wifiConfig, error: wifiError } = await supabase
-    .from("wifi_configs")
-    .select("ssid, min_signal_dbm")
-    .eq("class_id", payload.cid)
-    .single();
+  let wifiSsidFound: string | null = null;
+  let wifiSignalDbm: number | null = null;
+  let wifiPassed = false;
 
-  if (wifiError || !wifiConfig) {
-    throw new Error("WiFi configuration not found for this class");
+  try {
+    const { data: wifiConfig } = await supabase
+      .from("wifi_configs")
+      .select("ssid, min_signal_dbm")
+      .eq("class_id", payload.cid)
+      .single();
+
+    if (wifiConfig) {
+      const networks = await scanNearbyWifi();
+      const wifiResult = matchWifiSSID(
+        networks,
+        wifiConfig.ssid,
+        wifiConfig.min_signal_dbm
+      );
+      wifiSsidFound = wifiResult.ssid;
+      wifiSignalDbm = wifiResult.signal;
+      wifiPassed = wifiResult.found;
+      state.wifi = wifiPassed ? "passed" : "failed";
+    } else {
+      // No WiFi configured — skip
+      state.wifi = "skipped";
+    }
+  } catch {
+    // WiFi scan failed — record as failed but don't block
+    state.wifi = "failed";
   }
-
-  const networks = await scanNearbyWifi();
-  const wifiResult = matchWifiSSID(
-    networks,
-    wifiConfig.ssid,
-    wifiConfig.min_signal_dbm
-  );
-
-  if (!wifiResult.found) {
-    throw new Error("Campus WiFi not detected nearby");
-  }
-  state.wifi = "passed";
   onStep({ ...state });
 
   return {
     sessionId: payload.sid,
     classId: payload.cid,
-    gpsLatitude: gps.latitude,
-    gpsLongitude: gps.longitude,
-    geofencePassed: true,
-    wifiSsidFound: wifiResult.ssid,
-    wifiSignalDbm: wifiResult.signal,
-    wifiPassed: true,
+    gpsLatitude,
+    gpsLongitude,
+    geofencePassed,
+    wifiSsidFound,
+    wifiSignalDbm,
+    wifiPassed,
   };
 }

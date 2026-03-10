@@ -7,6 +7,7 @@ import {
   Alert,
   Image,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -27,11 +28,20 @@ const STEP_LABELS: Record<keyof Omit<VerificationState, "error">, string> = {
   photo: "Photo Capture",
 };
 
-const STATUS_ICONS: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
-  pending: { name: "ellipse-outline", color: "#ccc" },
-  checking: { name: "hourglass-outline", color: "#f0ad4e" },
-  passed: { name: "checkmark-circle", color: "#4CAF50" },
-  failed: { name: "close-circle", color: "#f44336" },
+const STEP_ICONS: Record<keyof Omit<VerificationState, "error">, keyof typeof Ionicons.glyphMap> = {
+  qr: "qr-code",
+  timing: "time",
+  geofence: "location",
+  wifi: "wifi",
+  photo: "camera",
+};
+
+const STATUS_CONFIG: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string; bg: string; label: string }> = {
+  pending: { name: "ellipse-outline", color: "#d1d5db", bg: "#f9fafb", label: "Waiting" },
+  checking: { name: "hourglass-outline", color: "#f59e0b", bg: "#fffbeb", label: "Checking" },
+  passed: { name: "checkmark-circle", color: "#059669", bg: "#ecfdf5", label: "Passed" },
+  failed: { name: "close-circle", color: "#ef4444", bg: "#fef2f2", label: "Failed" },
+  skipped: { name: "remove-circle", color: "#8b5cf6", bg: "#f5f3ff", label: "Skipped" },
 };
 
 export default function VerifyScreen() {
@@ -137,68 +147,132 @@ export default function VerifyScreen() {
     }
   }
 
+  // Count completed steps
+  const steps = Object.keys(STEP_LABELS) as Array<keyof typeof STEP_LABELS>;
+  const completedCount = steps.filter(
+    (s) => state[s] === "passed" || state[s] === "skipped"
+  ).length;
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Verification Steps</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerIcon}>
+          <Ionicons name={done ? "shield-checkmark" : "shield-half"} size={32} color="#4f46e5" />
+        </View>
+        <Text style={styles.title}>
+          {done ? "Verification Complete" : "Verifying Attendance"}
+        </Text>
+        <Text style={styles.subtitle}>
+          {done
+            ? "All checks passed — attendance recorded"
+            : `Step ${completedCount} of ${steps.length}`}
+        </Text>
+        {/* Progress bar */}
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${(completedCount / steps.length) * 100}%` },
+            ]}
+          />
+        </View>
+      </View>
 
-      {(Object.keys(STEP_LABELS) as Array<keyof typeof STEP_LABELS>).map(
-        (step) => {
+      {/* Steps */}
+      <View style={styles.stepsCard}>
+        {steps.map((step, idx) => {
           const status = state[step] ?? "pending";
-          const icon = STATUS_ICONS[status];
+          const config = STATUS_CONFIG[status];
+          const isLast = idx === steps.length - 1;
 
           return (
-            <View key={step} style={styles.stepRow}>
-              <Ionicons name={icon.name} size={24} color={icon.color} />
-              <Text style={styles.stepLabel}>{STEP_LABELS[step]}</Text>
+            <View key={step}>
+              <View style={styles.stepRow}>
+                <View style={[styles.stepIconCircle, { backgroundColor: config.bg }]}>
+                  <Ionicons name={STEP_ICONS[step]} size={18} color={config.color} />
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepLabel}>{STEP_LABELS[step]}</Text>
+                  <Text style={[styles.stepStatus, { color: config.color }]}>
+                    {config.label}
+                  </Text>
+                </View>
+                <Ionicons name={config.name} size={22} color={config.color} />
+              </View>
+              {!isLast && <View style={styles.stepDivider} />}
             </View>
           );
-        }
-      )}
+        })}
+      </View>
 
+      {/* Error */}
       {state.error && (
         <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={20} color="#f44336" />
-          <Text style={styles.errorText}>{state.error}</Text>
+          <Ionicons name="alert-circle" size={22} color="#ef4444" />
+          <View style={styles.errorContent}>
+            <Text style={styles.errorTitle}>Verification Error</Text>
+            <Text style={styles.errorText}>{state.error}</Text>
+          </View>
         </View>
       )}
 
+      {/* Photo prompt */}
       {state.photo === "checking" && !photoUri && (
-        <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
-          <Ionicons name="camera" size={24} color="#fff" />
-          <Text style={styles.photoButtonText}>Take Selfie</Text>
+        <TouchableOpacity style={styles.photoButton} onPress={takePhoto} activeOpacity={0.8}>
+          <View style={styles.photoButtonIcon}>
+            <Ionicons name="camera" size={28} color="#4f46e5" />
+          </View>
+          <View>
+            <Text style={styles.photoButtonTitle}>Take a Selfie</Text>
+            <Text style={styles.photoButtonDesc}>Required for attendance verification</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
         </TouchableOpacity>
       )}
 
+      {/* Photo preview */}
       {photoUri && (
         <View style={styles.photoPreview}>
           <Image source={{ uri: photoUri }} style={styles.photo} />
           {!done && (
             <View style={styles.photoActions}>
               <TouchableOpacity
-                style={[styles.actionButton, styles.retakeBtn]}
+                style={styles.retakeBtn}
                 onPress={takePhoto}
+                activeOpacity={0.7}
               >
-                <Text style={styles.actionText}>Retake</Text>
+                <Ionicons name="refresh" size={18} color="#4f46e5" />
+                <Text style={styles.retakeText}>Retake</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionButton, styles.submitBtn]}
+                style={[styles.submitBtn, submitting && { opacity: 0.7 }]}
                 onPress={submitAttendance}
                 disabled={submitting}
+                activeOpacity={0.8}
               >
-                <Text style={styles.actionText}>
-                  {submitting ? "Submitting..." : "Submit"}
-                </Text>
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                    <Text style={styles.submitText}>Submit Attendance</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           )}
         </View>
       )}
 
+      {/* Done button */}
       {done && (
         <TouchableOpacity
           style={styles.doneButton}
           onPress={() => router.back()}
+          activeOpacity={0.8}
         >
+          <Ionicons name="arrow-back" size={20} color="#fff" />
           <Text style={styles.doneText}>Back to Scanner</Text>
         </TouchableOpacity>
       )}
@@ -207,94 +281,200 @@ export default function VerifyScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 24 },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
+  container: { flex: 1, backgroundColor: "#f8f9fa" },
+  content: { padding: 20, paddingBottom: 40 },
+  header: {
+    alignItems: "center",
     marginBottom: 24,
+  },
+  headerIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "#eef2ff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#1a1a2e",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginTop: 4,
+  },
+  progressTrack: {
+    width: "100%",
+    height: 6,
+    backgroundColor: "#e5e7eb",
+    borderRadius: 3,
+    marginTop: 16,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: 6,
+    backgroundColor: "#4f46e5",
+    borderRadius: 3,
+  },
+  stepsCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: "hidden",
   },
   stepRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    gap: 14,
+    padding: 16,
   },
+  stepIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  stepContent: { flex: 1 },
   stepLabel: {
-    fontSize: 16,
-    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1a1a2e",
+  },
+  stepStatus: {
+    fontSize: 12,
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  stepDivider: {
+    height: 1,
+    backgroundColor: "#f3f4f6",
+    marginLeft: 70,
   },
   errorBox: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#ffebee",
+    gap: 12,
+    backgroundColor: "#fef2f2",
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  errorContent: { flex: 1 },
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#dc2626",
+    marginBottom: 4,
   },
   errorText: {
-    color: "#c62828",
-    fontSize: 14,
-    flex: 1,
+    fontSize: 13,
+    color: "#b91c1c",
+    lineHeight: 18,
   },
   photoButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#2f95dc",
-    borderRadius: 12,
+    gap: 14,
+    backgroundColor: "#fff",
+    borderRadius: 16,
     padding: 16,
-    marginTop: 24,
+    marginTop: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 2,
+    borderColor: "#eef2ff",
+    borderStyle: "dashed",
   },
-  photoButtonText: {
-    color: "#fff",
+  photoButtonIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#eef2ff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  photoButtonTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
+    color: "#1a1a2e",
+  },
+  photoButtonDesc: {
+    fontSize: 13,
+    color: "#6b7280",
+    marginTop: 2,
   },
   photoPreview: {
-    marginTop: 24,
+    marginTop: 20,
     alignItems: "center",
   },
   photo: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    marginBottom: 16,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    marginBottom: 20,
+    borderWidth: 4,
+    borderColor: "#e5e7eb",
   },
   photoActions: {
     flexDirection: "row",
     gap: 12,
-  },
-  actionButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
+    width: "100%",
   },
   retakeBtn: {
-    backgroundColor: "#eee",
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: "#eef2ff",
+  },
+  retakeText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#4f46e5",
   },
   submitBtn: {
-    backgroundColor: "#4CAF50",
+    flex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: "#4f46e5",
   },
-  actionText: {
-    fontSize: 14,
-    fontWeight: "600",
+  submitText: {
+    fontSize: 15,
+    fontWeight: "700",
     color: "#fff",
   },
   doneButton: {
-    backgroundColor: "#2f95dc",
-    borderRadius: 12,
-    padding: 16,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#4f46e5",
+    borderRadius: 14,
+    paddingVertical: 16,
     marginTop: 24,
   },
   doneText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });
