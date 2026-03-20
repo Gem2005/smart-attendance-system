@@ -106,7 +106,7 @@ export default function VerifyScreen() {
 
     try {
       // Upload photo
-      const fileName = `${user.id}/${verificationData.sessionId}/${Date.now()}.jpg`;
+      const fileName = `${verificationData.classId}/${verificationData.sessionId}/${user.id}/${Date.now()}.jpg`;
       const response = await fetch(photoUri);
       const blob = await response.blob();
 
@@ -149,9 +149,14 @@ export default function VerifyScreen() {
 
   // Count completed steps
   const steps = Object.keys(STEP_LABELS) as Array<keyof typeof STEP_LABELS>;
+  
+  // A step is considered "progressed past" if it's passed, skipped, or failed (since some checks are non-blocking).
   const completedCount = steps.filter(
-    (s) => state[s] === "passed" || state[s] === "skipped"
+    (s) => state[s] === "passed" || state[s] === "skipped" || state[s] === "failed" || (s === "photo" && done)
   ).length;
+
+  // We enforce 100% fill if done is true just in case.
+  const displayCount = done ? steps.length : completedCount;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -166,14 +171,14 @@ export default function VerifyScreen() {
         <Text style={styles.subtitle}>
           {done
             ? "All checks passed — attendance recorded"
-            : `Step ${completedCount} of ${steps.length}`}
+            : `Step ${displayCount} of ${steps.length}`}
         </Text>
         {/* Progress bar */}
         <View style={styles.progressTrack}>
           <View
             style={[
               styles.progressFill,
-              { width: `${(completedCount / steps.length) * 100}%` },
+              { width: `${(displayCount / steps.length) * 100}%` },
             ]}
           />
         </View>
@@ -265,11 +270,11 @@ export default function VerifyScreen() {
         </View>
       )}
 
-      {/* Done button */}
+      //Done button
       {done && (
         <TouchableOpacity
           style={styles.doneButton}
-          onPress={() => router.back()}
+          onPress={() => router.replace("/")}
           activeOpacity={0.8}
         >
           <Ionicons name="arrow-back" size={20} color="#fff" />

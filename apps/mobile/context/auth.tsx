@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { Platform } from "react-native";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 
@@ -40,8 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signIn(identifier: string, password: string) {
     const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api";
     
-    // Convert generic localhost to Android emulator localhost if not on web/ios
-    const normalizedUrl = API_URL.replace('localhost', '10.0.2.2'); 
+    // Convert generic localhost to Android emulator localhost if on Android
+    const isAndroid = Platform.OS === "android";
+    const normalizedUrl = isAndroid ? API_URL.replace("localhost", "10.0.2.2") : API_URL;
 
     const res = await fetch(`${normalizedUrl}/auth/student-login`, {
       method: "POST",
@@ -54,13 +56,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data.error || "Login failed");
     }
 
-    // Tell Supabase Client to use our custom JWT so RLS works
-    const { error } = await supabase.auth.setSession({
+    const { data: sessionData, error } = await supabase.auth.setSession({
       access_token: data.access_token,
-      refresh_token: "", // Custom JWT, no automatic refresh for now
+      refresh_token: data.access_token, // Hack: pass same token as refresh to prevent ignore, or avoid reliance on event
     });
 
     if (error) throw error;
+    
+    // Explicitly update state just in case onAuthStateChange ignores the custom session
+    setSession(sessionData?.session || { access_token: data.access_token, user: data.user } as any);
   }
 
   async function signOut() {
