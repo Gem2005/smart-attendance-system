@@ -76,6 +76,7 @@ export interface Database {
           building: string;
           room_number: string;
           created_at: string;
+          qr_refresh_interval: number | null;
         };
         Insert: {
           id?: string;
@@ -84,6 +85,7 @@ export interface Database {
           building: string;
           room_number: string;
           created_at?: string;
+          qr_refresh_interval?: number | null;
         };
         Update: {
           id?: string;
@@ -92,6 +94,7 @@ export interface Database {
           building?: string;
           room_number?: string;
           created_at?: string;
+          qr_refresh_interval?: number | null;
         };
         Relationships: [];
       };
@@ -236,6 +239,51 @@ export interface Database {
           expires_at?: string;
           qr_payload?: Json | null;
           is_active?: boolean;
+        };
+        Relationships: [];
+      };
+      attendance_requests: {
+        Row: {
+          id: string;
+          class_id: string;
+          session_id: string;
+          student_id: string;
+          description: string;
+          proof_urls: string[];
+          status: 'pending' | 'approved' | 'rejected';
+          created_at: string;
+          updated_at: string;
+          resolved_at: string | null;
+          teacher_notes: string | null;
+          new_attendance_status: 'present' | 'absent' | 'manual' | null;
+        };
+        Insert: {
+          id?: string;
+          class_id: string;
+          session_id: string;
+          student_id: string;
+          description: string;
+          proof_urls?: string[];
+          status?: 'pending' | 'approved' | 'rejected';
+          created_at?: string;
+          updated_at?: string;
+          resolved_at?: string | null;
+          teacher_notes?: string | null;
+          new_attendance_status?: 'present' | 'absent' | 'manual' | null;
+        };
+        Update: {
+          id?: string;
+          class_id?: string;
+          session_id?: string;
+          student_id?: string;
+          description?: string;
+          proof_urls?: string[];
+          status?: 'pending' | 'approved' | 'rejected';
+          created_at?: string;
+          updated_at?: string;
+          resolved_at?: string | null;
+          teacher_notes?: string | null;
+          new_attendance_status?: 'present' | 'absent' | 'manual' | null;
         };
         Relationships: [];
       };
