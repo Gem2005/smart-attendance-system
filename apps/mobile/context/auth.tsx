@@ -37,11 +37,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+  async function signIn(identifier: string, password: string) {
+    const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api";
+    
+    // Convert generic localhost to Android emulator localhost if not on web/ios
+    const normalizedUrl = API_URL.replace('localhost', '10.0.2.2'); 
+
+    const res = await fetch(`${normalizedUrl}/auth/student-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier, password }),
     });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Login failed");
+    }
+
+    // Tell Supabase Client to use our custom JWT so RLS works
+    const { error } = await supabase.auth.setSession({
+      access_token: data.access_token,
+      refresh_token: "", // Custom JWT, no automatic refresh for now
+    });
+
     if (error) throw error;
   }
 

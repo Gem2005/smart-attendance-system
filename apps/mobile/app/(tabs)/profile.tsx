@@ -76,16 +76,36 @@ export default function ProfileScreen() {
     }
 
     setChangingPassword(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setChangingPassword(false);
+    
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api";
+      const normalizedUrl = API_URL.replace('localhost', '10.0.2.2'); 
 
-    if (error) {
-      Alert.alert("Error", error.message);
-    } else {
+      // Retrieve current session token from Supabase since we set it during login
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const res = await fetch(`${normalizedUrl}/students/update-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update password");
+      }
+
       Alert.alert("Success", "Password changed successfully.");
       setShowPasswordChange(false);
       setNewPassword("");
       setConfirmPassword("");
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setChangingPassword(false);
     }
   }
 

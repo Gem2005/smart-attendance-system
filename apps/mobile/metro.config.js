@@ -15,7 +15,7 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
-// #3 - Force Metro to resolve (sub)dependencies only from nodeModulesPaths
-config.resolver.disableHierarchicalLookup = true;
+// #3 - Keep hierarchical lookup enabled so pnpm nested deps resolve correctly
+config.resolver.disableHierarchicalLookup = false;
 
 module.exports = config;

@@ -17,13 +17,15 @@ export interface Database {
           email: string;
           full_name: string;
           department: string | null;
+          encrypted_password?: string | null;
           created_at: string;
         };
         Insert: {
-          id: string;
+          id?: string;
           email: string;
           full_name: string;
           department?: string | null;
+          encrypted_password?: string | null;
           created_at?: string;
         };
         Update: {
@@ -31,6 +33,7 @@ export interface Database {
           email?: string;
           full_name?: string;
           department?: string | null;
+          encrypted_password?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -42,14 +45,16 @@ export interface Database {
           full_name: string;
           roll_number: string;
           phone: string | null;
+          encrypted_password?: string | null;
           created_at: string;
         };
         Insert: {
-          id: string;
+          id?: string;
           email?: string | null;
           full_name: string;
           roll_number: string;
           phone?: string | null;
+          encrypted_password?: string | null;
           created_at?: string;
         };
         Update: {
@@ -58,6 +63,7 @@ export interface Database {
           full_name?: string;
           roll_number?: string;
           phone?: string | null;
+          encrypted_password?: string | null;
           created_at?: string;
         };
         Relationships: [];

@@ -14,6 +14,21 @@ import { useAuth } from "@/context/auth";
 
 const STUDENT_EMAIL_DOMAIN = "students.attendance.local";
 
+function formatLoginError(error: any): string {
+  const code = String(error?.code ?? "").toLowerCase();
+  const message = String(error?.message ?? "");
+
+  if (code === "invalid_credentials" || /invalid login credentials/i.test(message) || /invalid credentials/i.test(message)) {
+    return "Invalid login credentials. Use your roll number as both ID and password on first login, or ask your teacher to create your account.";
+  }
+
+  if (code === "over_request_rate_limit" || /too many requests/i.test(message)) {
+    return "Too many login attempts. Please wait a minute and try again.";
+  }
+
+  return message || "Unable to sign in. Please try again.";
+}
+
 export default function LoginScreen() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -22,21 +37,17 @@ export default function LoginScreen() {
   const { signIn } = useAuth();
 
   async function handleLogin() {
-    if (!identifier || !password) {
+    if (!identifier.trim() || !password) {
       Alert.alert("Error", "Please enter your roll number/email and password");
       return;
     }
 
     setLoading(true);
     try {
-      // If identifier contains @, treat as email; otherwise convert rollno to email
-      const email = identifier.includes("@")
-        ? identifier
-        : `${identifier}@${STUDENT_EMAIL_DOMAIN}`;
-
-      await signIn(email, password);
+      // We handle generic identifier in the new custom /auth/student-login endpoint
+      await signIn(identifier.trim(), password);
     } catch (error: any) {
-      Alert.alert("Login Failed", error.message);
+      Alert.alert("Login Failed", formatLoginError(error));
     } finally {
       setLoading(false);
     }
