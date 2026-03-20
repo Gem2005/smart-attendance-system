@@ -1,5 +1,5 @@
 import * as Location from "expo-location";
-import { GEOFENCE_DEFAULT_RADIUS_METERS } from "shared";
+import { GEOFENCE_DEFAULT_RADIUS_METERS } from "@/lib/constants";
 
 export interface GeoPoint {
   latitude: number;

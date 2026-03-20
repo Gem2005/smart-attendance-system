@@ -1,13 +1,10 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "expo/tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
     "paths": {
       "@/*": [
         "./*"
-      ],
-      "shared": [
-        "../../packages/shared/index.ts"
       ]
     }
   },
@@ -16,6 +13,6 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
-    "../../packages/shared/**/*.ts"
+    "../../packages/supabase/types/**/*.ts"
   ]
 }

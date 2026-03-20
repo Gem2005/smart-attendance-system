@@ -1,0 +1,3 @@
+export const GEOFENCE_DEFAULT_RADIUS_METERS = 100;
+export const WIFI_MIN_SIGNAL_DBM = -50;
+export const CLASS_TIME_BUFFER_MINUTES = 5;

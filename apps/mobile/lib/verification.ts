@@ -1,5 +1,6 @@
-import type { QRPayload, AttendanceSubmission } from "shared";
-import { CLASS_TIME_BUFFER_MINUTES } from "shared";
+import type { AttendanceSubmission } from "@/types/attendance";
+import type { QRPayload } from "@/types/qr";
+import { CLASS_TIME_BUFFER_MINUTES } from "@/lib/constants";
 import { supabase } from "./supabase";
 import { getCurrentGPS, isWithinGeofence } from "./location";
 import { scanNearbyWifi, matchWifiSSID } from "./wifi";

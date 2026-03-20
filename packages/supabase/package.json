@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "migrate": "supabase db push",
-    "generate-types": "supabase gen types typescript --local > ../shared/types/database.ts",
+    "generate-types": "supabase gen types typescript --local > ./types/database.ts",
     "reset": "supabase db reset",
     "start": "supabase start",
     "stop": "supabase stop"

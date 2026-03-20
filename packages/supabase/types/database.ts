@@ -1,5 +1,4 @@
-// Placeholder — will be auto-generated via `supabase gen types typescript`
-// Run: pnpm --filter supabase generate-types
+// Generated from Supabase schema.
 
 export type Json =
   | string

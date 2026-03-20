@@ -1,6 +1,6 @@
 import { Platform, PermissionsAndroid } from "react-native";
 import WifiManager from "react-native-wifi-reborn";
-import { WIFI_MIN_SIGNAL_DBM } from "shared";
+import { WIFI_MIN_SIGNAL_DBM } from "@/lib/constants";
 
 export interface WifiNetwork {
   ssid: string;

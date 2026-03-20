@@ -167,16 +167,9 @@ smart-attendance-system/
 │   │   │   ├── 002_rls_policies.sql
 │   │   │   └── 003_seed_data.sql
 │   │   ├── config.toml
+│   │   ├── types/
+│   │   │   └── database.ts            # Generated from Supabase
 │   │   └── package.json
-│   │
-│   └── shared/                        # Shared TS types & constants
-│       ├── types/
-│       │   ├── database.ts            # Generated from Supabase
-│       │   ├── qr.ts
-│       │   └── attendance.ts
-│       ├── constants.ts
-│       ├── tsconfig.json
-│       └── package.json
 │
 ├── .env.example
 ├── .gitignore
@@ -498,7 +491,6 @@ async function verifyAttendance(qrData: QRPayload): Promise<Result> {
 - [ ] Install & configure shadcn/ui + Tailwind
 - [ ] Scaffold Expo app (`apps/mobile`)
 - [ ] Init Supabase project (`packages/supabase`)
-- [ ] Create shared types package (`packages/shared`)
 - [ ] Setup `.env.example` and environment config
 
 ### Phase 1 — Database & Auth
