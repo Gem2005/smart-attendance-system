@@ -7,7 +7,7 @@ CREATE TABLE public.attendance_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   class_id UUID NOT NULL REFERENCES public.classes(id) ON DELETE CASCADE,
   session_id UUID NOT NULL REFERENCES public.attendance_sessions(id) ON DELETE CASCADE,
-  student_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
   description TEXT NOT NULL,
   proof_urls TEXT[] DEFAULT '{}',
   status TEXT CHECK (status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
@@ -68,5 +68,13 @@ CREATE POLICY "teachers_read_all_proofs" ON storage.objects
   );
 
 -- 6. Trigger for handling updated_at
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.attendance_requests
-  FOR EACH ROW EXECUTE PROCEDURE moddatetime (updated_at);
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
