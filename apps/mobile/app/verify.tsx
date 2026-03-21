@@ -8,6 +8,7 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -336,7 +337,17 @@ const styles = StyleSheet.create({
   stepsCard: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    boxShadow: "0 2 8 0 rgba(0, 0, 0, 0.05)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
     overflow: "hidden",
   },
   stepRow: {
@@ -398,7 +409,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginTop: 16,
-    boxShadow: "0 2 8 0 rgba(0, 0, 0, 0.05)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
     borderWidth: 2,
     borderColor: "#eef2ff",
     borderStyle: "dashed",

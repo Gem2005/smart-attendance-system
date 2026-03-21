@@ -1,35 +1,24 @@
 import React from 'react';
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { createMaterialTopTabNavigator, MaterialTopTabNavigationOptions } from '@react-navigation/material-top-tabs';
-import { withLayoutContext } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-
-// Create a custom layout using Material Top Tabs for swipeability
-const { Navigator } = createMaterialTopTabNavigator();
-export const MaterialTopTabs = withLayoutContext<MaterialTopTabNavigationOptions, typeof Navigator>(Navigator);
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   
   return (
-    <MaterialTopTabs
-      tabBarPosition="bottom"
+    <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#4f46e5",
         tabBarInactiveTintColor: "#9ca3af",
-        tabBarIndicatorStyle: {
-          backgroundColor: "#4f46e5",
-          height: 3,
-          top: 0,
-        },
         tabBarStyle: {
           backgroundColor: "#fff",
           borderTopWidth: 1,
           borderTopColor: "#f0f0f0",
           height: 64 + (insets.bottom > 0 ? insets.bottom : 8),
           paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
-          // Support for shadow on Android/iOS
+          paddingTop: 8,
           ...Platform.select({
             ios: {
               shadowColor: "#000",
@@ -45,56 +34,59 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",
-          textTransform: "none",
         },
-        swipeEnabled: true,
-        // Ensure headers are shown as in the previous layout
-        headerShown: true,
         headerStyle: {
           backgroundColor: "#fff",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.06,
-          shadowRadius: 4,
-          elevation: 2,
+          ...Platform.select({
+            ios: {
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.06,
+              shadowRadius: 4,
+            },
+            android: {
+              elevation: 2,
+            },
+          }),
         },
         headerTitleStyle: {
           fontSize: 18,
           fontWeight: "700",
           color: "#1a1a2e",
         },
+        headerShown: true,
       }}
     >
-      <MaterialTopTabs.Screen
+      <Tabs.Screen
         name="index"
         options={{
           title: 'Scan QR',
-          tabBarLabel: 'Scan',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="qr-code" size={20} color={color} />
+          headerTitle: 'Mark Attendance',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="qr-code" size={size} color={color} />
           ),
         }}
       />
-      <MaterialTopTabs.Screen
+      <Tabs.Screen
         name="history"
         options={{
           title: 'History',
-          tabBarLabel: 'History',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="time" size={20} color={color} />
+          headerTitle: 'Attendance History',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="time" size={size} color={color} />
           ),
         }}
       />
-      <MaterialTopTabs.Screen
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="person" size={20} color={color} />
+          headerTitle: 'My Profile',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />
-    </MaterialTopTabs>
+    </Tabs>
   );
 }

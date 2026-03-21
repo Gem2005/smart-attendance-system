@@ -171,7 +171,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
-    boxShadow: "0 6 12 0 rgba(79, 70, 229, 0.35)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#4f46e5",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 10,
+      },
+    }),
   },
   title: {
     fontSize: 30,
@@ -206,7 +216,17 @@ const styles = StyleSheet.create({
     borderColor: "#e5e7eb",
     paddingHorizontal: 14,
     height: 54,
-    boxShadow: "0 1 3 0 rgba(0, 0, 0, 0.04)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   inputIcon: {
     marginRight: 10,
@@ -226,7 +246,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: 4,
-    boxShadow: "0 4 8 0 rgba(79, 70, 229, 0.3)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#4f46e5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
   buttonDisabled: {
     opacity: 0.6,

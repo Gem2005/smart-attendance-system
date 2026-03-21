@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
@@ -154,7 +155,17 @@ const styles = StyleSheet.create({
     padding: 32,
     alignItems: "center",
     width: "100%",
-    boxShadow: "0 4 16 0 rgba(0, 0, 0, 0.08)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   permissionIcon: {
     width: 88,
@@ -186,7 +197,17 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 28,
-    boxShadow: "0 4 8 0 rgba(79, 70, 229, 0.3)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#4f46e5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
   permissionButtonText: {
     color: "#fff",

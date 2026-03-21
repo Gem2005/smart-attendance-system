@@ -30,6 +30,13 @@ interface WifiConfig {
   min_signal_dbm: number;
 }
 
+interface AttendanceSession {
+  id: string;
+  session_date: string;
+  started_at: string;
+  is_active: boolean;
+}
+
 export function ClassTabs({
   classId,
   schedules,
@@ -45,7 +52,7 @@ export function ClassTabs({
   wifiConfig: WifiConfig | null;
   qrRefreshInterval: number;
   token?: string;
-  initialSessions?: any[];
+  initialSessions?: AttendanceSession[];
 }) {
   return (
     <Tabs defaultValue="students" className="space-y-4">
@@ -75,6 +82,7 @@ export function ClassTabs({
           initialLocation={location}
           initialWifi={wifiConfig}
           initialQrRefreshInterval={qrRefreshInterval}
+          token={token}
         />
       </TabsContent>
     </Tabs>

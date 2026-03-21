@@ -62,19 +62,21 @@ export function SettingsTab({
   initialLocation,
   initialWifi,
   initialQrRefreshInterval,
+  token,
 }: {
   classId: string;
   initialSchedules: Schedule[];
   initialLocation: Location | null;
   initialWifi: WifiConfig | null;
   initialQrRefreshInterval: number;
+  token?: string;
 }) {
   const [schedules, setSchedules] = useState<Schedule[]>(initialSchedules);
   const [location, setLocation] = useState<Location | null>(initialLocation);
   const [wifi, setWifi] = useState<WifiConfig | null>(initialWifi);
   const [qrRefreshInterval, setQrRefreshInterval] = useState(initialQrRefreshInterval.toString());
   const [saving, setSaving] = useState(false);
-  const supabase = createClient();
+  const supabase = createClient(token);
 
   // ──── Schedule CRUD ────
 

@@ -322,7 +322,17 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    boxShadow: "0 2 8 0 rgba(0, 0, 0, 0.05)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
     overflow: "hidden",
   },
   infoRow: {
@@ -418,7 +428,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#fecaca",
-    boxShadow: "0 1 4 0 rgba(0, 0, 0, 0.03)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.03,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   signOutText: {
     fontSize: 16,

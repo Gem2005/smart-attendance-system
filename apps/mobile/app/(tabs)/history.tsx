@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -279,7 +280,8 @@ export default function HistoryScreen() {
   };
 
   function renderSessionItem({ item }: { item: AttendanceItem }) {
-    const date = new Date(item.session_date || item.created_at);
+    const dateValue = item.session_date || item.created_at;
+    const date = dateValue ? new Date(dateValue) : new Date();
     const formatted = date.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
@@ -395,6 +397,18 @@ export default function HistoryScreen() {
 
   if (selectedClassId) {
     const selectedGroup = classGroups.find(g => g.class_id === selectedClassId);
+    
+    if (!selectedGroup) {
+      return (
+        <View style={styles.center}>
+          <Text>Class not found.</Text>
+          <TouchableOpacity onPress={() => setSelectedClassId(null)}>
+            <Text style={{ color: "#4f46e5", marginTop: 10 }}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.container}>
         <View style={styles.detailHeader}>
@@ -405,13 +419,13 @@ export default function HistoryScreen() {
             <Ionicons name="arrow-back" size={24} color="#1a1a2e" />
           </TouchableOpacity>
           <View style={styles.detailHeaderInfo}>
-            <Text style={styles.detailClassName} numberOfLines={1}>{selectedGroup?.class_name}</Text>
-            <Text style={styles.detailClassCode}>{selectedGroup?.class_code}</Text>
+            <Text style={styles.detailClassName} numberOfLines={1}>{selectedGroup.class_name}</Text>
+            <Text style={styles.detailClassCode}>{selectedGroup.class_code}</Text>
           </View>
         </View>
         
         <FlatList
-          data={selectedGroup?.records}
+          data={selectedGroup.records || []}
           keyExtractor={(item) => item.id}
           renderItem={renderSessionItem}
           contentContainerStyle={styles.list}
@@ -598,7 +612,17 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
     justifyContent: "space-between",
-    boxShadow: "0 4 12 0 rgba(79, 70, 229, 0.1)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
     borderWidth: 1,
     borderColor: "#eef2ff",
   },
@@ -630,7 +654,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    boxShadow: "0 2 8 0 rgba(0, 0, 0, 0.05)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   classCardHeader: {
     flexDirection: "row",
@@ -692,7 +726,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 16,
     marginBottom: 12,
-    boxShadow: "0 2 8 0 rgba(0, 0, 0, 0.05)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
     overflow: "hidden",
   },
   cardLeft: {

@@ -41,6 +41,7 @@ export default async function DashboardLayout({
         <div className="flex items-center gap-4">
           <Sheet>
             <SheetTrigger
+              id="dashboard-mobile-nav-trigger"
               render={
                 <button className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-transparent bg-transparent text-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <Menu className="h-5 w-5" />
