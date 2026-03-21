@@ -1,49 +1,76 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
-import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "../lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const TOKEN_KEY = "sas-auth-token";
+const USER_KEY = "sas-auth-user";
+
+export interface AuthUser {
+  id: string;
+  email?: string;
+  role?: string;
+  [key: string]: any;
+}
+
+export interface CustomSession {
+  access_token: string;
+  user: AuthUser;
+}
 
 interface AuthContextType {
-  session: Session | null;
-  user: User | null;
+  session: CustomSession | null;
+  user: AuthUser | null;
+  token: string | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (identifier: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
+  token: null,
   loading: true,
   signIn: async () => {},
   signOut: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<CustomSession | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Restore session from storage on startup
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    async function restoreSession() {
+      try {
+        const [token, userJson] = await AsyncStorage.multiGet([TOKEN_KEY, USER_KEY]);
+        const storedToken = token[1];
+        const storedUser = userJson[1];
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+        if (storedToken && storedUser) {
+          setSession({
+            access_token: storedToken,
+            user: JSON.parse(storedUser),
+          });
+        }
+      } catch {
+        // Corrupted storage — ignore and treat as logged out
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    return () => subscription.unsubscribe();
+    restoreSession();
   }, []);
 
   async function signIn(identifier: string, password: string) {
     const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api";
-    
-    // Convert generic localhost to Android emulator localhost if on Android
+
+    // Convert localhost to Android emulator address
     const isAndroid = Platform.OS === "android";
-    const normalizedUrl = isAndroid ? API_URL.replace("localhost", "10.0.2.2") : API_URL;
+    const normalizedUrl = isAndroid
+      ? API_URL.replace("localhost", "10.0.2.2")
+      : API_URL;
 
     const res = await fetch(`${normalizedUrl}/auth/student-login`, {
       method: "POST",
@@ -56,19 +83,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data.error || "Login failed");
     }
 
-    const { data: sessionData, error } = await supabase.auth.setSession({
+    const newSession: CustomSession = {
       access_token: data.access_token,
-      refresh_token: data.access_token, // Hack: pass same token as refresh to prevent ignore, or avoid reliance on event
-    });
+      user: data.user,
+    };
 
-    if (error) throw error;
-    
-    // Explicitly update state just in case onAuthStateChange ignores the custom session
-    setSession(sessionData?.session || { access_token: data.access_token, user: data.user } as any);
+    // Persist to AsyncStorage
+    await AsyncStorage.multiSet([
+      [TOKEN_KEY, data.access_token],
+      [USER_KEY, JSON.stringify(data.user)],
+    ]);
+
+    setSession(newSession);
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+    setSession(null);
   }
 
   return (
@@ -76,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         session,
         user: session?.user ?? null,
+        token: session?.access_token ?? null,
         loading,
         signIn,
         signOut,

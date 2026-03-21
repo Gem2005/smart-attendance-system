@@ -8,6 +8,7 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
@@ -21,7 +22,7 @@ interface StudentProfile {
 }
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, token, signOut } = useAuth();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [classCount, setClassCount] = useState(0);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -79,16 +80,14 @@ export default function ProfileScreen() {
     
     try {
       const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api";
-      const normalizedUrl = API_URL.replace('localhost', '10.0.2.2'); 
+      const isAndroid = Platform.OS === "android";
+      const normalizedUrl = isAndroid ? API_URL.replace('localhost', '10.0.2.2') : API_URL;
 
-      // Retrieve current session token from Supabase since we set it during login
-      const { data: { session } } = await supabase.auth.getSession();
-      
       const res = await fetch(`${normalizedUrl}/students/update-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.access_token}`
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({ newPassword }),
       });
