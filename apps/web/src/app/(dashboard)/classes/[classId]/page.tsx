@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ClassTabs } from "@/components/class-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Building, DoorOpen } from "lucide-react";
+import { cookies } from "next/headers";
 
 export default async function ClassDetailPage({
   params,
@@ -11,6 +12,8 @@ export default async function ClassDetailPage({
 }) {
   const { classId } = await params;
   const supabase = await createClient();
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sas-auth-token")?.value;
 
   const { data: cls, error } = await supabase
     .from("classes")
@@ -76,6 +79,7 @@ export default async function ClassDetailPage({
         location={location}
         wifiConfig={wifiConfig}
         qrRefreshInterval={cls.qr_refresh_interval ?? 30}
+        token={token}
       />
     </div>
   );

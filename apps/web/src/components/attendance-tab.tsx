@@ -72,7 +72,7 @@ interface Session {
   is_active: boolean;
 }
 
-export function AttendanceTab({ classId }: { classId: string }) {
+export function AttendanceTab({ classId, token }: { classId: string; token?: string }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -81,7 +81,7 @@ export function AttendanceTab({ classId }: { classId: string }) {
   const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState("");
-  const supabase = createClient();
+  const supabase = createClient(token);
 
   const handlePhotoClick = async (path: string) => {
     const { data, error } = await supabase.storage
@@ -129,10 +129,14 @@ export function AttendanceTab({ classId }: { classId: string }) {
 
     // Get student details
     const studentIds = [...new Set(recordsData.map((r) => r.student_id))];
-    const { data: studentsData } = await supabase
-      .from("students")
-      .select("id, full_name, roll_number")
-      .in("id", studentIds);
+    let studentsData: any[] = [];
+    if (studentIds.length > 0) {
+      const { data } = await supabase
+        .from("students")
+        .select("id, full_name, roll_number")
+        .in("id", studentIds);
+      studentsData = data ?? [];
+    }
 
     const studentMap = new Map(
       (studentsData ?? []).map((s) => [s.id, s])

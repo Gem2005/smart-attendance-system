@@ -16,7 +16,7 @@ import { QrCode, Square, Clock } from "lucide-react";
 
 type Schedule = { day_of_week: number; start_time: string; end_time: string };
 
-export function QRTab({ classId, schedules = [], qrRefreshInterval = 30 }: { classId: string; schedules?: Schedule[], qrRefreshInterval?: number }) {
+export function QRTab({ classId, schedules = [], qrRefreshInterval = 30, token }: { classId: string; schedules?: Schedule[], qrRefreshInterval?: number, token?: string }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(false);
@@ -29,7 +29,7 @@ export function QRTab({ classId, schedules = [], qrRefreshInterval = 30 }: { cla
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const endSessionTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const supabase = createClient();
+  const supabase = createClient(token);
 
   // Helper to dynamically stop session
   const dynamicStopSession = useCallback(async (sId: string) => {
@@ -188,10 +188,12 @@ export function QRTab({ classId, schedules = [], qrRefreshInterval = 30 }: { cla
 
     let user = null;
     const match = typeof document !== "undefined" ? document.cookie.match(/(^|; )sas-auth-token=([^;]*)/) : null;
-    const token = match ? match[2] : null;
-    if (token) {
+    const localToken = match ? match[2] : null;
+    const activeToken = token || localToken;
+    
+    if (activeToken) {
       try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
+        const payload = JSON.parse(atob(activeToken.split(".")[1]));
         user = { id: payload.sub, email: payload.email };
       } catch (e) {
         console.error("Failed to parse token", e);

@@ -45,7 +45,7 @@ interface BulkUploadResult {
   error?: string;
 }
 
-export function StudentsTab({ classId }: { classId: string }) {
+export function StudentsTab({ classId, token }: { classId: string; token?: string }) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
@@ -57,7 +57,7 @@ export function StudentsTab({ classId }: { classId: string }) {
   const [passwordStudent, setPasswordStudent] = useState<Student | null>(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
+  const supabase = createClient(token);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
