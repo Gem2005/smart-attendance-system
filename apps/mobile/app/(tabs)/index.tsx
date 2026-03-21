@@ -192,7 +192,6 @@ const styles = StyleSheet.create({
   permissionButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
     backgroundColor: "#4f46e5",
     borderRadius: 14,
     paddingVertical: 14,
@@ -213,6 +212,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+    marginLeft: 8,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -286,7 +286,6 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
     backgroundColor: "#4f46e5",
     paddingVertical: 12,
     paddingHorizontal: 24,
@@ -296,11 +295,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "600",
+    marginLeft: 8,
   },
   scanningIndicator: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
     backgroundColor: "rgba(255,255,255,0.15)",
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -310,5 +309,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "500",
+    marginLeft: 8,
   },
 });

@@ -48,6 +48,152 @@ interface ClassGroup {
   percentage: number;
 }
 
+const statusConfig: Record<
+  string,
+  { color: string; bg: string; icon: keyof typeof Ionicons.glyphMap; label: string }
+> = {
+  present: {
+    color: "#059669",
+    bg: "#ecfdf5",
+    icon: "checkmark-circle",
+    label: "Present",
+  },
+  absent: {
+    color: "#dc2626",
+    bg: "#fef2f2",
+    icon: "close-circle",
+    label: "Absent",
+  },
+  manual: {
+    color: "#d97706",
+    bg: "#fffbeb",
+    icon: "pencil",
+    label: "Manual",
+  },
+};
+
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "N/A";
+    
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    
+    return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+  } catch (e) {
+    return "N/A";
+  }
+};
+
+const formatTime = (dateString: string | null) => {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12; 
+    const minStr = minutes < 10 ? `0${minutes}` : minutes;
+    
+    return `${hours}:${minStr} ${ampm}`;
+  } catch (e) {
+    return "";
+  }
+};
+
+function SessionItem({ item, onReport }: { item: AttendanceItem; onReport: (item: AttendanceItem) => void }) {
+  const config = statusConfig[item.status] || statusConfig.manual;
+  const formattedDate = formatDate(item.session_date || item.created_at);
+  const formattedTime = formatTime(item.scanned_at);
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardLeft}>
+        <View style={[styles.statusDot, { backgroundColor: config.color }]} />
+      </View>
+      <View style={styles.cardContent}>
+        <View style={styles.cardTop}>
+          <Text style={styles.sessionDate} numberOfLines={1}>
+            {formattedDate}
+          </Text>
+          <View style={[styles.badge, { backgroundColor: config.bg }]}>
+            <Ionicons name={config.icon} size={12} color={config.color} style={{ marginRight: 4 }} />
+            <Text style={[styles.badgeText, { color: config.color }]}>
+              {config.label}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.cardBottom}>
+          <View style={styles.cardBottomLeft}>
+            {item.scanned_at && (
+              <>
+                <Ionicons name="time-outline" size={13} color="#9ca3af" style={{ marginRight: 4 }} />
+                <Text style={styles.dateText}>
+                  Scanned at {formattedTime}
+                </Text>
+              </>
+            )}
+          </View>
+          <TouchableOpacity 
+            style={styles.reportBtn} 
+            onPress={() => onReport(item)}
+          >
+            <Text style={styles.reportBtnText}>Report</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function ClassCard({ item, onPress }: { item: ClassGroup; onPress: (id: string) => void }) {
+  const config = item.last_status ? (statusConfig[item.last_status] || statusConfig.manual) : null;
+  const dateFormatted = formatDate(item.last_date);
+  const timeFormatted = formatTime(item.last_scanned_at);
+  const percentageColor = item.percentage >= 75 ? "#059669" : item.percentage >= 60 ? "#d97706" : "#dc2626";
+
+  return (
+    <TouchableOpacity 
+      style={styles.classCard} 
+      onPress={() => onPress(item.class_id)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.classCardHeader}>
+        <View style={styles.classInfo}>
+          <Text style={styles.classNameText} numberOfLines={1}>{item.class_name}</Text>
+          <Text style={styles.classCodeText}>{item.class_code}</Text>
+        </View>
+        <View style={styles.percentageContainer}>
+          <Text style={[styles.percentageText, { color: percentageColor }]}>{item.percentage}%</Text>
+          <Text style={styles.percentageLabel}>Attendance</Text>
+        </View>
+      </View>
+      
+      <View style={styles.classCardFooter}>
+        <View style={styles.lastSessionInfo}>
+          <Text style={styles.lastLabel}>Last Session: </Text>
+          <Text style={styles.lastValue}>
+            {dateFormatted}{timeFormatted ? ` • ${timeFormatted}` : ""}
+          </Text>
+        </View>
+        {config && (
+          <View style={[styles.badge, { backgroundColor: config.bg }]}>
+            <Ionicons name={config.icon} size={11} color={config.color} style={{ marginRight: 4 }} />
+            <Text style={[styles.badgeText, { color: config.color, fontSize: 11 }]}>
+              {config.label}
+            </Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function HistoryScreen() {
   const { user } = useAuth();
   const [records, setRecords] = useState<AttendanceItem[]>([]);
@@ -56,7 +202,6 @@ export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
-  // Report Modal State
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportItem, setReportItem] = useState<AttendanceItem | null>(null);
   const [reportDescription, setReportDescription] = useState("");
@@ -64,10 +209,9 @@ export default function HistoryScreen() {
   const [submittingReport, setSubmittingReport] = useState(false);
 
   const fetchRecords = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
 
     try {
-      // 1. Fetch all enrolled classes
       const { data: enrollments, error: enrollError } = await supabase
         .from("class_enrollments")
         .select(`
@@ -80,12 +224,11 @@ export default function HistoryScreen() {
 
       const classes = (enrollments || []).map((e: any) => ({
         class_id: e.class_id,
-        class_name: e.classes.name,
-        class_code: e.classes.code,
+        class_name: e.classes?.name || "Unknown",
+        class_code: e.classes?.code || "N/A",
       }));
       setEnrolledClasses(classes);
 
-      // 2. Fetch all attendance records
       const { data, error } = await supabase
         .from("attendance_records")
         .select(`
@@ -106,7 +249,7 @@ export default function HistoryScreen() {
       if (data) {
         setRecords(
           data.map((r: any) => ({
-            id: r.id,
+            id: r.id || Math.random().toString(),
             status: r.status,
             scanned_at: r.scanned_at,
             created_at: r.created_at,
@@ -121,17 +264,15 @@ export default function HistoryScreen() {
     } catch (err: any) {
       console.error("Error fetching history:", err.message);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchRecords().finally(() => setLoading(false));
   }, [fetchRecords]);
 
-  // Group records by class
   const classGroups = useMemo(() => {
     const groups: Record<string, ClassGroup> = {};
     
-    // Initialize with all enrolled classes
     enrolledClasses.forEach(c => {
       groups[c.class_id] = {
         class_id: c.class_id,
@@ -156,7 +297,6 @@ export default function HistoryScreen() {
       }
     });
 
-    // Calculate percentages
     Object.values(groups).forEach(g => {
       if (g.records.length > 0) {
         const present = g.records.filter(r => r.status === "present" || r.status === "manual").length;
@@ -209,7 +349,7 @@ export default function HistoryScreen() {
   }
 
   async function submitReport() {
-    if (!reportItem || !user) return;
+    if (!reportItem || !user?.id) return;
     if (!reportDescription.trim()) {
       Alert.alert("Description required", "Please describe why you are reporting this attendance record.");
       return;
@@ -255,141 +395,10 @@ export default function HistoryScreen() {
     }
   }
 
-  const statusConfig: Record<
-    string,
-    { color: string; bg: string; icon: keyof typeof Ionicons.glyphMap; label: string }
-  > = {
-    present: {
-      color: "#059669",
-      bg: "#ecfdf5",
-      icon: "checkmark-circle",
-      label: "Present",
-    },
-    absent: {
-      color: "#dc2626",
-      bg: "#fef2f2",
-      icon: "close-circle",
-      label: "Absent",
-    },
-    manual: {
-      color: "#d97706",
-      bg: "#fffbeb",
-      icon: "pencil",
-      label: "Manual",
-    },
-  };
-
-  function renderSessionItem({ item }: { item: AttendanceItem }) {
-    const dateValue = item.session_date || item.created_at;
-    const date = dateValue ? new Date(dateValue) : new Date();
-    const formatted = date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-    const config = statusConfig[item.status] ?? statusConfig.manual;
-
-    return (
-      <View style={styles.card}>
-        <View style={styles.cardLeft}>
-          <View style={[styles.statusDot, { backgroundColor: config.color }]} />
-        </View>
-        <View style={styles.cardContent}>
-          <View style={styles.cardTop}>
-            <Text style={styles.sessionDate} numberOfLines={1}>
-              {formatted}
-            </Text>
-            <View style={[styles.badge, { backgroundColor: config.bg }]}>
-              <Ionicons name={config.icon} size={12} color={config.color} />
-              <Text style={[styles.badgeText, { color: config.color }]}>
-                {config.label}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.cardBottom}>
-            <View style={styles.cardBottomLeft}>
-              {item.scanned_at && (
-                <>
-                  <Ionicons name="time-outline" size={13} color="#9ca3af" />
-                  <Text style={styles.dateText}>
-                    Scanned at {new Date(item.scanned_at).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                </>
-              )}
-            </View>
-            <TouchableOpacity 
-              style={styles.reportBtn} 
-              onPress={() => openReportModal(item)}
-            >
-              <Text style={styles.reportBtnText}>Report</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  function renderClassCard({ item }: { item: ClassGroup }) {
-    const config = item.last_status ? (statusConfig[item.last_status] ?? statusConfig.manual) : null;
-    const date = item.last_date ? new Date(item.last_date) : null;
-    const dateFormatted = date ? date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    }) : "No sessions yet";
-
-    const timeFormatted = item.last_scanned_at 
-      ? new Date(item.last_scanned_at).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : null;
-
-    const percentageColor = item.percentage >= 75 ? "#059669" : item.percentage >= 60 ? "#d97706" : "#dc2626";
-
-    return (
-      <TouchableOpacity 
-        style={styles.classCard} 
-        onPress={() => setSelectedClassId(item.class_id)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.classCardHeader}>
-          <View style={styles.classInfo}>
-            <Text style={styles.classNameText} numberOfLines={1}>{item.class_name}</Text>
-            <Text style={styles.classCodeText}>{item.class_code}</Text>
-          </View>
-          <View style={styles.percentageContainer}>
-            <Text style={[styles.percentageText, { color: percentageColor }]}>{item.percentage}%</Text>
-            <Text style={styles.percentageLabel}>Attendance</Text>
-          </View>
-        </View>
-        
-        <View style={styles.classCardFooter}>
-          <View style={styles.lastSessionInfo}>
-            <Text style={styles.lastLabel}>Last Session:</Text>
-            <Text style={styles.lastValue}>
-              {dateFormatted}{timeFormatted ? ` • ${timeFormatted}` : ""}
-            </Text>
-          </View>
-          {config && (
-            <View style={[styles.badge, { backgroundColor: config.bg }]}>
-              <Ionicons name={config.icon} size={11} color={config.color} />
-              <Text style={[styles.badgeText, { color: config.color, fontSize: 11 }]}>
-                {config.label}
-              </Text>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  }
-
   if (loading) {
     return (
       <View style={styles.center}>
-        <Ionicons name="hourglass-outline" size={32} color="#9ca3af" />
+        <ActivityIndicator size="large" color="#4f46e5" />
         <Text style={styles.loadingText}>Loading records...</Text>
       </View>
     );
@@ -398,17 +407,6 @@ export default function HistoryScreen() {
   if (selectedClassId) {
     const selectedGroup = classGroups.find(g => g.class_id === selectedClassId);
     
-    if (!selectedGroup) {
-      return (
-        <View style={styles.center}>
-          <Text>Class not found.</Text>
-          <TouchableOpacity onPress={() => setSelectedClassId(null)}>
-            <Text style={{ color: "#4f46e5", marginTop: 10 }}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
     return (
       <View style={styles.container}>
         <View style={styles.detailHeader}>
@@ -419,15 +417,16 @@ export default function HistoryScreen() {
             <Ionicons name="arrow-back" size={24} color="#1a1a2e" />
           </TouchableOpacity>
           <View style={styles.detailHeaderInfo}>
-            <Text style={styles.detailClassName} numberOfLines={1}>{selectedGroup.class_name}</Text>
-            <Text style={styles.detailClassCode}>{selectedGroup.class_code}</Text>
+            <Text style={styles.detailClassName} numberOfLines={1}>{selectedGroup?.class_name || "Class Detail"}</Text>
+            <Text style={styles.detailClassCode}>{selectedGroup?.class_code || ""}</Text>
           </View>
         </View>
         
         <FlatList
-          data={selectedGroup.records || []}
-          keyExtractor={(item) => item.id}
-          renderItem={renderSessionItem}
+          key="session-list"
+          data={selectedGroup?.records || []}
+          keyExtractor={(item) => item.id?.toString()}
+          renderItem={({ item }) => <SessionItem item={item} onReport={openReportModal} />}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -441,11 +440,9 @@ export default function HistoryScreen() {
           }
         />
         
-        {/* Reuse the report modal */}
         <ReportModal 
           visible={reportModalVisible} 
           onClose={() => setReportModalVisible(false)}
-          item={reportItem}
           description={reportDescription}
           setDescription={setReportDescription}
           photos={reportPhotos}
@@ -475,12 +472,11 @@ export default function HistoryScreen() {
       </View>
 
       <FlatList
+        key="class-list"
         data={classGroups}
-        keyExtractor={(item) => item.class_id}
-        renderItem={renderClassCard}
-        contentContainerStyle={
-          classGroups.length === 0 ? styles.center : styles.list
-        }
+        keyExtractor={(item) => item.class_id?.toString()}
+        renderItem={({ item }) => <ClassCard item={item} onPress={setSelectedClassId} />}
+        contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIcon}>
@@ -508,7 +504,6 @@ export default function HistoryScreen() {
 function ReportModal({ 
   visible, 
   onClose, 
-  item, 
   description, 
   setDescription, 
   photos, 
@@ -533,7 +528,7 @@ function ReportModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView>
+          <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={styles.modalLabel}>Description</Text>
             <TextInput
               style={styles.modalInput}
@@ -547,12 +542,12 @@ function ReportModal({
 
             <Text style={styles.modalLabel}>Proof Images</Text>
             <View style={styles.photoContainer}>
-              {photos.map((uri: string, idx: number) => (
+              {(photos || []).map((uri: string, idx: number) => (
                 <View key={idx} style={styles.photoWrapper}>
                   <Image source={{ uri }} style={styles.photoPreview} />
                   <TouchableOpacity
                     style={styles.removePhotoBtn}
-                    onPress={() => setPhotos((prev: string[]) => prev.filter((_, i) => i !== idx))}
+                    onPress={() => setPhotos((prev: string[]) => prev.filter((_: any, i: number) => i !== idx))}
                   >
                     <Ionicons name="close-circle" size={20} color="#ef4444" />
                   </TouchableOpacity>
@@ -710,7 +705,6 @@ const styles = StyleSheet.create({
   lastSessionInfo: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
   },
   lastLabel: {
     fontSize: 12,
@@ -765,7 +759,6 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
@@ -783,7 +776,6 @@ const styles = StyleSheet.create({
   cardBottomLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
   },
   dateText: {
     fontSize: 13,
@@ -895,11 +887,12 @@ const styles = StyleSheet.create({
   photoContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
     marginTop: 8,
   },
   photoWrapper: {
     position: "relative",
+    marginRight: 12,
+    marginBottom: 12,
   },
   photoPreview: {
     width: 80,
@@ -931,7 +924,6 @@ const styles = StyleSheet.create({
   },
   modalActions: {
     flexDirection: "row",
-    gap: 12,
     marginTop: 24,
     marginBottom: 20,
   },
@@ -941,6 +933,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#f3f4f6",
     alignItems: "center",
+    marginRight: 6,
   },
   cancelBtnText: {
     color: "#374151",
@@ -954,6 +947,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#4f46e5",
     alignItems: "center",
     justifyContent: "center",
+    marginLeft: 6,
   },
   submitBtnDisabled: {
     opacity: 0.7,

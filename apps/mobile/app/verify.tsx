@@ -353,7 +353,6 @@ const styles = StyleSheet.create({
   stepRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
     padding: 16,
   },
   stepIconCircle: {
@@ -362,6 +361,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 14,
   },
   stepContent: { flex: 1 },
   stepLabel: {
@@ -381,7 +381,6 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     flexDirection: "row",
-    gap: 12,
     backgroundColor: "#fef2f2",
     padding: 16,
     borderRadius: 16,
@@ -389,7 +388,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#fecaca",
   },
-  errorContent: { flex: 1 },
+  errorContent: { flex: 1, marginLeft: 12 },
   errorTitle: {
     fontSize: 14,
     fontWeight: "700",
@@ -404,7 +403,6 @@ const styles = StyleSheet.create({
   photoButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
@@ -431,6 +429,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#eef2ff",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 14,
   },
   photoButtonTitle: {
     fontSize: 16,
@@ -456,7 +455,6 @@ const styles = StyleSheet.create({
   },
   photoActions: {
     flexDirection: "row",
-    gap: 12,
     width: "100%",
   },
   retakeBtn: {
@@ -464,36 +462,37 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
     paddingVertical: 14,
     borderRadius: 14,
     backgroundColor: "#eef2ff",
+    marginRight: 6,
   },
   retakeText: {
     fontSize: 15,
     fontWeight: "600",
     color: "#4f46e5",
+    marginLeft: 6,
   },
   submitBtn: {
     flex: 2,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
     paddingVertical: 14,
     borderRadius: 14,
     backgroundColor: "#4f46e5",
+    marginLeft: 6,
   },
   submitText: {
     fontSize: 15,
     fontWeight: "700",
     color: "#fff",
+    marginLeft: 6,
   },
   doneButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
     backgroundColor: "#4f46e5",
     borderRadius: 14,
     paddingVertical: 16,
@@ -503,5 +502,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+    marginLeft: 8,
   },
 });
