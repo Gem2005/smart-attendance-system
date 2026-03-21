@@ -13,9 +13,7 @@ import { Building, DoorOpen } from "lucide-react";
 
 export default async function ClassesPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await import('@/lib/supabase/server').then(m => m.getUser());
 
   // Get classes assigned to this teacher
   const { data: assignments } = await supabase

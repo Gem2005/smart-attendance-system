@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyPassword } from "@/lib/auth/encryption";
 import { createSessionJwt } from "@/lib/auth/session";
+import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,7 +44,15 @@ export async function POST(request: NextRequest) {
       app_metadata: { role: "teacher" },
     });
 
-    // In a pure web context, we just return the token and the client can set it in Supabase
+    const cookieStore = await cookies();
+    cookieStore.set("sas-auth-token", accessToken, {
+      httpOnly: false, // allow Client Components to read it
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+    });
+
     return NextResponse.json({
       success: true,
       access_token: accessToken,

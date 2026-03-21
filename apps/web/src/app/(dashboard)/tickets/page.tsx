@@ -5,9 +5,7 @@ import { TicketsClient } from "./client";
 export default async function TicketsPage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await import('@/lib/supabase/server').then(m => m.getUser());
 
   if (!user) {
     redirect("/login");

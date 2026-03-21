@@ -4,7 +4,7 @@ import { StudentLogoutButton } from "@/components/student-logout-button";
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await import('@/lib/supabase/server').then(m => m.getUser());
 
   if (user) {
     const role = user.user_metadata?.role || user.app_metadata?.role || "student";

@@ -39,10 +39,7 @@ export default function LoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: "",
-      });
+      // We rely on the HTTP cookie set by the API now.
 
       router.push("/dashboard");
       router.refresh();

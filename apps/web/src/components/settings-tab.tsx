@@ -189,9 +189,17 @@ export function SettingsTab({
   async function saveWifi() {
     setSaving(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+        let user = null;
+    const match = typeof document !== "undefined" ? document.cookie.match(/(^|; )sas-auth-token=([^;]*)/) : null;
+    const token = match ? match[2] : null;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        user = { id: payload.sub, email: payload.email };
+      } catch (e) {
+        console.error("Failed to parse token", e);
+      }
+    }
     if (!user) {
       toast.error("Not authenticated");
       setSaving(false);

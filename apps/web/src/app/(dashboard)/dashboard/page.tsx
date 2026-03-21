@@ -9,9 +9,7 @@ import { BookOpen, Users, CalendarCheck, BarChart3 } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await import('@/lib/supabase/server').then(m => m.getUser());
 
   // Fetch stats for this teacher
   const { data: assignments } = await supabase
