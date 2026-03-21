@@ -25,32 +25,40 @@ export default async function ClassDetailPage({
     notFound();
   }
 
-  // Get enrollment count
-  const { count: studentCount } = await supabase
-    .from("class_enrollments")
-    .select("*", { count: "exact", head: true })
-    .eq("class_id", classId);
+  // Fetch related data in parallel
+  const [enrollmentsRes, schedulesRes, locationRes, wifiRes, sessionsRes] = await Promise.all([
+    supabase
+      .from("class_enrollments")
+      .select("*", { count: "exact", head: true })
+      .eq("class_id", classId),
+    supabase
+      .from("class_schedules")
+      .select("*")
+      .eq("class_id", classId)
+      .order("day_of_week"),
+    supabase
+      .from("class_locations")
+      .select("*")
+      .eq("class_id", classId)
+      .maybeSingle(),
+    supabase
+      .from("wifi_configs")
+      .select("*")
+      .eq("class_id", classId)
+      .maybeSingle(),
+    supabase
+      .from("attendance_sessions")
+      .select("id, session_date, started_at, is_active")
+      .eq("class_id", classId)
+      .order("session_date", { ascending: false })
+      .limit(50)
+  ]);
 
-  // Get schedules
-  const { data: schedules } = await supabase
-    .from("class_schedules")
-    .select("*")
-    .eq("class_id", classId)
-    .order("day_of_week");
-
-  // Get location
-  const { data: location } = await supabase
-    .from("class_locations")
-    .select("*")
-    .eq("class_id", classId)
-    .single();
-
-  // Get WiFi config
-  const { data: wifiConfig } = await supabase
-    .from("wifi_configs")
-    .select("*")
-    .eq("class_id", classId)
-    .single();
+  const studentCount = enrollmentsRes.count;
+  const schedules = schedulesRes.data;
+  const location = locationRes.data;
+  const wifiConfig = wifiRes.data;
+  const sessions = sessionsRes.data;
 
   return (
     <div className="space-y-6">
@@ -80,6 +88,7 @@ export default async function ClassDetailPage({
         wifiConfig={wifiConfig}
         qrRefreshInterval={cls.qr_refresh_interval ?? 30}
         token={token}
+        initialSessions={sessions ?? []}
       />
     </div>
   );

@@ -226,78 +226,82 @@ export async function POST(request: NextRequest) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
+  const rollNumbers = students.map(s => s.roll_number);
+
+  // 1. Fetch ALL existing students in these roll numbers
+  const { data: existingStudents, error: fetchError } = await adminClient
+    .from("students")
+    .select("id, roll_number")
+    .in("roll_number", rollNumbers);
+
+  if (fetchError) {
+    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  }
+
+  const existingMap = new Map(existingStudents.map(s => [s.roll_number, s.id]));
+
+  // 2. Identify students to create and students to just enroll
+  const toCreate: any[] = [];
+  const toEnrollExisting: string[] = [];
   const results: { rollNumber: string; status: string; error?: string }[] = [];
 
   for (const student of students) {
-    try {
-      // Check if student already exists by roll number
-      const { data: existing } = await adminClient
-        .from("students")
-        .select("id")
-        .eq("roll_number", student.roll_number)
-        .single();
-
-      if (existing) {
-        // Just enroll
-        const { error: enrollError } = await adminClient
-          .from("class_enrollments")
-          .insert({ class_id: classId, student_id: existing.id });
-
-        if (enrollError && enrollError.code !== "23505") {
-          results.push({
-            rollNumber: student.roll_number,
-            status: "error",
-            error: enrollError.message,
-          });
-        } else {
-          results.push({
-            rollNumber: student.roll_number,
-            status: "enrolled_existing",
-          });
-        }
-        continue;
-      }
-
-      // Create student profile
-      const { data: profileData, error: profileError } = await adminClient
-        .from("students")
-        .insert({
-          email: student.email || null,
-          full_name: student.name,
-          roll_number: student.roll_number,
-          encrypted_password: encryptPassword(student.roll_number)
-        }).select('id').single();
-
-      if (profileError) {
-        results.push({
-          rollNumber: student.roll_number,
-          status: "error",
-          error: profileError.message,
-        });
-        continue;
-      }
-
-      // Enroll in class
-      await adminClient
-        .from("class_enrollments")
-        .insert({ class_id: classId, student_id: profileData.id });
-
-      results.push({ rollNumber: student.roll_number, status: "created" });
-    } catch (err: unknown) {
-      results.push({
-        rollNumber: student.roll_number,
-        status: "error",
-        error: errorMessage(err),
+    const existingId = existingMap.get(student.roll_number);
+    if (existingId) {
+      toEnrollExisting.push(existingId);
+      results.push({ rollNumber: student.roll_number, status: "enrolled_existing" });
+    } else {
+      toCreate.push({
+        email: student.email || null,
+        full_name: student.name,
+        roll_number: student.roll_number,
+        encrypted_password: encryptPassword(student.roll_number)
       });
+    }
+  }
+
+  // 3. Batch Create New Students
+  let newlyCreatedIds: string[] = [];
+  if (toCreate.length > 0) {
+    const { data: createdData, error: createError } = await adminClient
+      .from("students")
+      .insert(toCreate)
+      .select("id, roll_number");
+
+    if (createError) {
+      return NextResponse.json({ error: "Failed to create students: " + createError.message }, { status: 500 });
+    }
+
+    newlyCreatedIds = createdData.map(s => s.id);
+    createdData.forEach(s => {
+      results.push({ rollNumber: s.roll_number, status: "created" });
+    });
+  }
+
+  // 4. Batch Enroll ALL Students (Existing + New)
+  const allStudentIdsToEnroll = [...toEnrollExisting, ...newlyCreatedIds];
+  if (allStudentIdsToEnroll.length > 0) {
+    const enrollments = allStudentIdsToEnroll.map(sid => ({
+      class_id: classId,
+      student_id: sid
+    }));
+
+    // upsert will ignore duplicates (roll numbers we already enrolled in this class)
+    const { error: enrollError } = await adminClient
+      .from("class_enrollments")
+      .upsert(enrollments, { onConflict: "class_id,student_id" });
+
+    if (enrollError) {
+       // Non-fatal for the whole batch if some fail, but we log it
+       console.error("Enrollment error:", enrollError.message);
     }
   }
 
   const created = results.filter((r) => r.status === "created").length;
   const enrolled = results.filter((r) => r.status === "enrolled_existing").length;
-  const errors = results.filter((r) => r.status === "error").length;
 
   return NextResponse.json({
-    message: `Processed ${students.length} students: ${created} created, ${enrolled} existing enrolled, ${errors} errors`,
+    message: `Processed ${students.length} students: ${created} created, ${enrolled} existing enrolled`,
     results,
   });
 }

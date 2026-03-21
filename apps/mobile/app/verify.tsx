@@ -108,27 +108,17 @@ export default function VerifyScreen() {
       // Upload photo
       const fileName = `${verificationData.classId}/${verificationData.sessionId}/${user.id}/${Date.now()}.jpg`;
 
-      // Helper function to get blob from local file URI (fixes "Network request failed" on Android)
-      const getBlobFromUri = async (uri: string): Promise<Blob> => {
-        return new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.onload = function () {
-            resolve(xhr.response);
-          };
-          xhr.onerror = function (e) {
-            reject(new Error("Failed to read photo file"));
-          };
-          xhr.responseType = "blob";
-          xhr.open("GET", uri, true);
-          xhr.send(null);
-        });
-      };
-
-      const blob = await getBlobFromUri(photoUri);
+      // Use FormData for reliable file uploads in React Native
+      const formData = new FormData();
+      formData.append("file", {
+        uri: photoUri,
+        name: fileName.split("/").pop(),
+        type: "image/jpeg",
+      } as any);
 
       const { error: uploadError } = await supabase.storage
         .from("attendance-photos")
-        .upload(fileName, blob, {
+        .upload(fileName, formData, {
           contentType: "image/jpeg",
           upsert: true,
         });

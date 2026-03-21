@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import {
   Card,
   CardContent,
@@ -9,74 +9,52 @@ import { BookOpen, Users, CalendarCheck, BarChart3 } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const user = await import('@/lib/supabase/server').then(m => m.getUser());
+  const user = await getUser();
 
-  // Fetch stats for this teacher
+  if (!user) return null;
+
+  // Fetch assignments first to get class IDs
   const { data: assignments } = await supabase
     .from("class_teacher_assignments")
     .select("class_id")
-    .eq("teacher_id", user!.id);
+    .eq("teacher_id", user.id);
 
   const classIds = assignments?.map((a) => a.class_id) ?? [];
-
-  // Total classes
-  const totalClasses = classIds.length;
-
-  // Total enrolled students across all classes
-  let totalStudents = 0;
-  if (classIds.length > 0) {
-    const { count } = await supabase
-      .from("class_enrollments")
-      .select("*", { count: "exact", head: true })
-      .in("class_id", classIds);
-    totalStudents = count ?? 0;
-  }
-
-  // Today's sessions
   const today = new Date().toISOString().split("T")[0];
-  let todaySessions = 0;
-  if (classIds.length > 0) {
-    const { count } = await supabase
-      .from("attendance_sessions")
-      .select("*", { count: "exact", head: true })
-      .eq("teacher_id", user!.id)
-      .eq("session_date", today);
-    todaySessions = count ?? 0;
-  }
-
-  // Total attendance records this month
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
-  let monthRecords = 0;
-  if (classIds.length > 0) {
-    const { count } = await supabase
-      .from("attendance_records")
-      .select("*", { count: "exact", head: true })
-      .in("class_id", classIds)
-      .gte("created_at", monthStart.toISOString());
-    monthRecords = count ?? 0;
-  }
+
+  // Parallelize subsequent independent queries
+  const [studentsRes, sessionsRes, recordsRes] = await Promise.all([
+    classIds.length > 0 
+      ? supabase.from("class_enrollments").select("*", { count: "exact", head: true }).in("class_id", classIds)
+      : Promise.resolve({ count: 0 }),
+    supabase.from("attendance_sessions").select("*", { count: "exact", head: true }).eq("teacher_id", user.id).eq("session_date", today),
+    classIds.length > 0
+      ? supabase.from("attendance_records").select("*", { count: "exact", head: true }).in("class_id", classIds).gte("created_at", monthStart.toISOString())
+      : Promise.resolve({ count: 0 })
+  ]);
 
   const stats = [
     {
       title: "Total Classes",
-      value: totalClasses,
+      value: classIds.length,
       icon: BookOpen,
     },
     {
       title: "Total Students",
-      value: totalStudents,
+      value: studentsRes.count ?? 0,
       icon: Users,
     },
     {
       title: "Today's Sessions",
-      value: todaySessions,
+      value: sessionsRes.count ?? 0,
       icon: CalendarCheck,
     },
     {
       title: "Records This Month",
-      value: monthRecords,
+      value: recordsRes.count ?? 0,
       icon: BarChart3,
     },
   ];

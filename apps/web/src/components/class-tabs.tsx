@@ -37,6 +37,7 @@ export function ClassTabs({
   wifiConfig,
   qrRefreshInterval,
   token,
+  initialSessions = [],
 }: {
   classId: string;
   schedules: Schedule[];
@@ -44,6 +45,7 @@ export function ClassTabs({
   wifiConfig: WifiConfig | null;
   qrRefreshInterval: number;
   token?: string;
+  initialSessions?: any[];
 }) {
   return (
     <Tabs defaultValue="students" className="space-y-4">
@@ -59,7 +61,7 @@ export function ClassTabs({
       </TabsContent>
 
       <TabsContent value="attendance">
-        <AttendanceTab classId={classId} token={token} />
+        <AttendanceTab classId={classId} token={token} initialSessions={initialSessions} />
       </TabsContent>
 
       <TabsContent value="qr">

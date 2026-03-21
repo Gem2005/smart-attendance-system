@@ -169,9 +169,10 @@ export default function HistoryScreen() {
   }, [records, enrolledClasses]);
 
   const overallAverage = useMemo(() => {
-    if (classGroups.length === 0) return 0;
-    const total = classGroups.reduce((acc, g) => acc + g.percentage, 0);
-    return Math.round(total / classGroups.length);
+    const activeGroups = classGroups.filter((g) => g.records.length > 0);
+    if (activeGroups.length === 0) return 0;
+    const total = activeGroups.reduce((acc, g) => acc + g.percentage, 0);
+    return Math.round(total / activeGroups.length);
   }, [classGroups]);
 
   async function onRefresh() {

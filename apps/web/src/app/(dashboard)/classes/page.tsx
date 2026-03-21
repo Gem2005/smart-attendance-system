@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import {
   Card,
   CardContent,
@@ -13,44 +13,24 @@ import { Building, DoorOpen } from "lucide-react";
 
 export default async function ClassesPage() {
   const supabase = await createClient();
-  const user = await import('@/lib/supabase/server').then(m => m.getUser());
+  const user = await getUser();
 
-  // Get classes assigned to this teacher
-  const { data: assignments } = await supabase
-    .from("class_teacher_assignments")
-    .select("class_id")
-    .eq("teacher_id", user!.id);
+  if (!user) return null;
 
-  const classIds = assignments?.map((a) => a.class_id) ?? [];
-
-  let classes: {
-    id: string;
-    name: string;
-    code: string;
-    building: string;
-    room_number: string;
-  }[] = [];
-
-  if (classIds.length > 0) {
-    const { data } = await supabase
-      .from("classes")
-      .select("id, name, code, building, room_number")
-      .in("id", classIds)
-      .order("name");
-    classes = data ?? [];
-  }
-
-  // Get enrollment counts
-  const enrollmentCounts: Record<string, number> = {};
-  if (classIds.length > 0) {
-    for (const classId of classIds) {
-      const { count } = await supabase
-        .from("class_enrollments")
-        .select("*", { count: "exact", head: true })
-        .eq("class_id", classId);
-      enrollmentCounts[classId] = count ?? 0;
-    }
-  }
+  // Get classes assigned to this teacher with enrollment counts in a single efficient query
+  const { data: classes } = await supabase
+    .from("classes")
+    .select(`
+      id, 
+      name, 
+      code, 
+      building, 
+      room_number,
+      class_teacher_assignments!inner(teacher_id),
+      class_enrollments(count)
+    `)
+    .eq("class_teacher_assignments.teacher_id", user.id)
+    .order("name");
 
   return (
     <div className="space-y-6">
@@ -64,7 +44,7 @@ export default async function ClassesPage() {
         <CreateClassDialog />
       </div>
 
-      {classes.length === 0 ? (
+      {!classes || classes.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <h3 className="text-lg font-semibold">No classes yet</h3>
@@ -75,7 +55,7 @@ export default async function ClassesPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {classes.map((cls) => (
+          {classes.map((cls: any) => (
             <Link key={cls.id} href={`/classes/${cls.id}`}>
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-3">
@@ -96,7 +76,7 @@ export default async function ClassesPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    {enrollmentCounts[cls.id] ?? 0} students enrolled
+                    {cls.class_enrollments?.[0]?.count ?? 0} students enrolled
                   </p>
                 </CardContent>
               </Card>

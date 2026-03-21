@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, Upload, Download, KeyRound } from "lucide-react";
+import { Loading } from "@/components/ui/loading";
 
 interface Student {
   id: string;
@@ -37,6 +38,37 @@ interface Student {
   full_name: string;
   roll_number: string;
   phone: string | null;
+  attendance_percentage: number | null;
+}
+
+interface StudentBase {
+  id: string;
+  email: string | null;
+  full_name: string;
+  roll_number: string;
+  phone: string | null;
+}
+
+interface AttendanceRecordRow {
+  student_id: string;
+  status: "present" | "absent" | "manual";
+}
+
+interface EnrollmentRow {
+  student: StudentBase | StudentBase[] | null;
+}
+
+function isStudentBase(value: unknown): value is StudentBase {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<StudentBase>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.full_name === "string" &&
+    typeof candidate.roll_number === "string"
+  );
 }
 
 interface BulkUploadResult {
@@ -62,26 +94,67 @@ export function StudentsTab({ classId, token }: { classId: string; token?: strin
   const fetchStudents = useCallback(async () => {
     setLoading(true);
 
-    // Get enrolled student IDs
-    const { data: enrollments } = await supabase
+    const { data, error } = await supabase
       .from("class_enrollments")
-      .select("student_id")
+      .select(`
+        student:students (
+          id,
+          email,
+          full_name,
+          roll_number,
+          phone
+        )
+      `)
       .eq("class_id", classId);
 
-    if (!enrollments || enrollments.length === 0) {
-      setStudents([]);
+    const { data: attendanceData, error: attendanceError } = await supabase
+      .from("attendance_records")
+      .select("student_id,status")
+      .eq("class_id", classId);
+
+    if (error) {
+      toast.error("Failed to fetch students");
       setLoading(false);
       return;
     }
 
-    const studentIds = enrollments.map((e) => e.student_id);
-    const { data } = await supabase
-      .from("students")
-      .select("id, email, full_name, roll_number, phone")
-      .in("id", studentIds)
-      .order("roll_number");
+    if (attendanceError) {
+      toast.error("Failed to fetch attendance stats");
+      setLoading(false);
+      return;
+    }
 
-    setStudents(data ?? []);
+    const attendanceByStudent = new Map<string, { total: number; presentLike: number }>();
+
+    for (const record of (attendanceData ?? []) as AttendanceRecordRow[]) {
+      const existing = attendanceByStudent.get(record.student_id) ?? { total: 0, presentLike: 0 };
+      existing.total += 1;
+      if (record.status === "present" || record.status === "manual") {
+        existing.presentLike += 1;
+      }
+      attendanceByStudent.set(record.student_id, existing);
+    }
+
+    const normalizedStudents = ((data ?? []) as unknown as EnrollmentRow[])
+      .map((d) => (Array.isArray(d.student) ? d.student[0] : d.student))
+      .filter((student): student is StudentBase => isStudentBase(student));
+
+    const students: Student[] = normalizedStudents
+      .map((student) => {
+        const stats = attendanceByStudent.get(student.id);
+        const attendance_percentage =
+          stats && stats.total > 0
+            ? Math.round((stats.presentLike / stats.total) * 1000) / 10
+            : null;
+
+        return {
+          ...student,
+          attendance_percentage,
+        };
+      })
+      .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+
+    setStudents(students);
     setLoading(false);
   }, [classId, supabase]);
 
@@ -198,11 +271,12 @@ export function StudentsTab({ classId, token }: { classId: string; token?: strin
     const formData = new FormData(e.currentTarget);
     const full_name = formData.get("full_name") as string;
     const roll_number = formData.get("roll_number") as string;
+    const email = (formData.get("email") as string) || null;
     const phone = (formData.get("phone") as string) || null;
 
     const { error } = await supabase
       .from("students")
-      .update({ full_name, roll_number, phone })
+      .update({ full_name, roll_number, email, phone })
       .eq("id", editingStudent.id);
 
     if (error) {
@@ -337,9 +411,7 @@ export function StudentsTab({ classId, token }: { classId: string; token?: strin
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            Loading students...
-          </p>
+          <Loading text="Loading students..." className="py-4" />
         ) : students.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
             No students enrolled yet.
@@ -353,6 +425,7 @@ export function StudentsTab({ classId, token }: { classId: string; token?: strin
                   <TableHead className="whitespace-nowrap">Name</TableHead>
                   <TableHead className="whitespace-nowrap">Email</TableHead>
                   <TableHead className="whitespace-nowrap">Phone</TableHead>
+                  <TableHead className="whitespace-nowrap">Attendance %</TableHead>
                   <TableHead className="w-[100px] whitespace-nowrap">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -365,6 +438,11 @@ export function StudentsTab({ classId, token }: { classId: string; token?: strin
                   <TableCell>{student.full_name}</TableCell>
                   <TableCell>{student.email}</TableCell>
                   <TableCell>{student.phone ?? "—"}</TableCell>
+                  <TableCell>
+                    {student.attendance_percentage == null
+                      ? "—"
+                      : `${student.attendance_percentage.toFixed(1)}%`}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button
@@ -434,6 +512,15 @@ export function StudentsTab({ classId, token }: { classId: string; token?: strin
                   name="roll_number"
                   defaultValue={editingStudent.roll_number}
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_email">Email</Label>
+                <Input
+                  id="edit_email"
+                  name="email"
+                  type="email"
+                  defaultValue={editingStudent.email ?? ""}
                 />
               </div>
               <div className="space-y-2">
