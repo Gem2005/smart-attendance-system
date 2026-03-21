@@ -113,9 +113,7 @@ function SessionItem({ item, onReport }: { item: AttendanceItem; onReport: (item
 
   return (
     <View style={styles.card}>
-      <View style={styles.cardLeft}>
-        <View style={[styles.statusDot, { backgroundColor: config.color }]} />
-      </View>
+      <View style={[styles.cardLeft, { backgroundColor: config.color }]} />
       <View style={styles.cardContent}>
         <View style={styles.cardTop}>
           <Text style={styles.sessionDate} numberOfLines={1}>
@@ -422,26 +420,24 @@ export default function HistoryScreen() {
           </View>
         </View>
         
-        <View style={{ flex: 1 }}>
-          <FlatList
-            key="session-list"
-            data={selectedGroup?.records || []}
-            keyExtractor={(item) => item.id?.toString()}
-            renderItem={({ item }) => <SessionItem item={item} onReport={openReportModal} />}
-            style={{ flex: 1 }}
-            contentContainerStyle={styles.list}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons name="document-text-outline" size={48} color="#d1d5db" />
-                <Text style={styles.emptyTitle}>No Records</Text>
-                <Text style={styles.emptyDesc}>No attendance sessions found for this class.</Text>
-              </View>
-            }
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-          />
-        </View>
+        <FlatList
+          key="session-list"
+          data={selectedGroup?.records || []}
+          keyExtractor={(item) => item.id?.toString()}
+          renderItem={({ item }) => <SessionItem item={item} onReport={openReportModal} />}
+          style={styles.flatList}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="document-text-outline" size={48} color="#d1d5db" />
+              <Text style={styles.emptyTitle}>No Records</Text>
+              <Text style={styles.emptyDesc}>No attendance sessions found for this class.</Text>
+            </View>
+          }
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        />
         
         <ReportModal 
           visible={reportModalVisible} 
@@ -474,35 +470,33 @@ export default function HistoryScreen() {
         </View>
       </View>
 
-      <View style={{ flex: 1 }}>
-        <FlatList
-          key="class-list"
-          data={classGroups}
-          keyExtractor={(item) => item.class_id?.toString()}
-          renderItem={({ item }) => <ClassCard item={item} onPress={setSelectedClassId} />}
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="school-outline" size={48} color="#d1d5db" />
-              </View>
-              <Text style={styles.emptyTitle}>No Enrolled Classes</Text>
-              <Text style={styles.emptyDesc}>
-                You are not enrolled in any classes yet.
-              </Text>
+      <FlatList
+        key="class-list"
+        data={classGroups}
+        keyExtractor={(item) => item.class_id?.toString()}
+        renderItem={({ item }) => <ClassCard item={item} onPress={setSelectedClassId} />}
+        style={styles.flatList}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="school-outline" size={48} color="#d1d5db" />
             </View>
-          }
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#4f46e5"
-              colors={["#4f46e5"]}
-            />
-          }
-        />
-      </View>
+            <Text style={styles.emptyTitle}>No Enrolled Classes</Text>
+            <Text style={styles.emptyDesc}>
+              You are not enrolled in any classes yet.
+            </Text>
+          </View>
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#4f46e5"
+            colors={["#4f46e5"]}
+          />
+        }
+      />
     </View>
   );
 }
@@ -590,7 +584,8 @@ function ReportModal({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8f9fa" },
-  list: { padding: 16, paddingBottom: 20 },
+  flatList: { flex: 1 },
+  listContent: { padding: 16, paddingBottom: 24, flexGrow: 1 },
   center: {
     flex: 1,
     justifyContent: "center",
@@ -737,17 +732,12 @@ const styles = StyleSheet.create({
         elevation: 2,
       },
     }),
-    // Removed overflow: hidden which can cause layout issues on Android
   },
   cardLeft: {
     width: 4,
     borderTopLeftRadius: 16,
     borderBottomLeftRadius: 16,
-    overflow: "hidden",
-  },
-  statusDot: {
-    width: 4,
-    height: "100%",
+    alignSelf: "stretch",
   },
   cardContent: {
     flex: 1,
