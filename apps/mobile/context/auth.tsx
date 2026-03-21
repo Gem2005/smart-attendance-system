@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/lib/supabase";
 
 const TOKEN_KEY = "sas-auth-token";
 const USER_KEY = "sas-auth-user";
@@ -9,6 +10,9 @@ export interface AuthUser {
   id: string;
   email?: string;
   role?: string;
+  full_name?: string;
+  roll_number?: string;
+  phone?: string;
   [key: string]: any;
 }
 
@@ -48,13 +52,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const storedUser = userJson[1];
 
         if (storedToken && storedUser) {
-          setSession({
+          const parsedUser = JSON.parse(storedUser);
+          const newSession = {
             access_token: storedToken,
-            user: JSON.parse(storedUser),
+            user: parsedUser,
+          };
+          
+          setSession(newSession);
+
+          // Sync with Supabase client
+          await supabase.auth.setSession({
+            access_token: storedToken,
+            refresh_token: "", // Custom auth might not provide refresh token
           });
         }
-      } catch {
-        // Corrupted storage — ignore and treat as logged out
+      } catch (err) {
+        console.error("Failed to restore session", err);
       } finally {
         setLoading(false);
       }
@@ -88,6 +101,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: data.user,
     };
 
+    // Sync with Supabase client before persisting
+    const { error: sbError } = await supabase.auth.setSession({
+      access_token: data.access_token,
+      refresh_token: "",
+    });
+
+    if (sbError) {
+      console.warn("Supabase session sync failed", sbError.message);
+    }
+
     // Persist to AsyncStorage
     await AsyncStorage.multiSet([
       [TOKEN_KEY, data.access_token],
@@ -99,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signOut() {
     await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+    await supabase.auth.signOut();
     setSession(null);
   }
 

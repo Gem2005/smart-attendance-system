@@ -270,7 +270,7 @@ export default function VerifyScreen() {
         </View>
       )}
 
-      //Done button
+      {/* Done button */}
       {done && (
         <TouchableOpacity
           style={styles.doneButton}
@@ -327,11 +327,7 @@ const styles = StyleSheet.create({
   stepsCard: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    boxShadow: "0 2 8 0 rgba(0, 0, 0, 0.05)",
     overflow: "hidden",
   },
   stepRow: {
@@ -393,11 +389,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginTop: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    boxShadow: "0 2 8 0 rgba(0, 0, 0, 0.05)",
     borderWidth: 2,
     borderColor: "#eef2ff",
     borderStyle: "dashed",

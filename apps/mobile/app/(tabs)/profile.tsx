@@ -35,21 +35,39 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (!user) return;
 
+    // Set initial profile from user object if available
+    if (user.full_name || user.roll_number) {
+      setProfile({
+        full_name: user.full_name ?? "...",
+        email: user.email ?? null,
+        roll_number: user.roll_number ?? "",
+        phone: user.phone ?? null,
+      });
+    }
+
     async function load() {
-      const { data: student } = await supabase
-        .from("students")
-        .select("full_name, email, roll_number, phone")
-        .eq("id", user!.id)
-        .single();
+      try {
+        const { data: student, error } = await supabase
+          .from("students")
+          .select("full_name, email, roll_number, phone")
+          .eq("id", user!.id)
+          .single();
 
-      if (student) setProfile(student);
+        if (student) {
+          setProfile(student);
+        } else if (error) {
+          console.warn("Profile fetch error:", error.message);
+        }
 
-      const { count } = await supabase
-        .from("class_enrollments")
-        .select("*", { count: "exact", head: true })
-        .eq("student_id", user!.id);
+        const { count } = await supabase
+          .from("class_enrollments")
+          .select("*", { count: "exact", head: true })
+          .eq("student_id", user!.id);
 
-      setClassCount(count ?? 0);
+        setClassCount(count ?? 0);
+      } catch (err) {
+        console.error("Failed to load profile details", err);
+      }
     }
 
     load();
@@ -304,11 +322,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    boxShadow: "0 2 8 0 rgba(0, 0, 0, 0.05)",
     overflow: "hidden",
   },
   infoRow: {
@@ -404,11 +418,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#fecaca",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    boxShadow: "0 1 4 0 rgba(0, 0, 0, 0.03)",
   },
   signOutText: {
     fontSize: 16,

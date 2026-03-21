@@ -4,6 +4,10 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
+import { Camera } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/context/auth';
@@ -28,6 +32,17 @@ function AuthGate() {
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)');
+      
+      // Request permissions immediately after login
+      (async () => {
+        try {
+          await Location.requestForegroundPermissionsAsync();
+          await Camera.requestCameraPermissionsAsync();
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        } catch (e) {
+          console.warn("Permission request failed", e);
+        }
+      })();
     }
   }, [session, loading, segments]);
 
@@ -55,10 +70,12 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <AuthGate />
-      </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AuthProvider>
+          <AuthGate />
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

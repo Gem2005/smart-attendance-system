@@ -85,46 +85,45 @@ export default function ScanScreen() {
         style={styles.camera}
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         onBarcodeScanned={scanning ? handleBarCodeScanned : undefined}
-      >
-        <View style={styles.overlay}>
-          {/* Top text */}
-          <View style={styles.topSection}>
-            <Text style={styles.scanTitle}>Scan QR Code</Text>
-            <Text style={styles.scanHint}>
-              Align the QR code within the frame
-            </Text>
-          </View>
+      />
+      <View style={styles.overlay}>
+        {/* Top text */}
+        <View style={styles.topSection}>
+          <Text style={styles.scanTitle}>Scan QR Code</Text>
+          <Text style={styles.scanHint}>
+            Align the QR code within the frame
+          </Text>
+        </View>
 
-          {/* Scan frame */}
-          <View style={styles.frameContainer}>
-            <View style={styles.scanFrame}>
-              <View style={[styles.corner, styles.topLeft]} />
-              <View style={[styles.corner, styles.topRight]} />
-              <View style={[styles.corner, styles.bottomLeft]} />
-              <View style={[styles.corner, styles.bottomRight]} />
-            </View>
-          </View>
-
-          {/* Bottom controls */}
-          <View style={styles.bottomSection}>
-            {!scanning ? (
-              <TouchableOpacity
-                style={styles.retryButton}
-                onPress={() => setScanning(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="refresh" size={20} color="#fff" />
-                <Text style={styles.retryText}>Tap to Scan Again</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.scanningIndicator}>
-                <ActivityIndicator size="small" color="#4f46e5" />
-                <Text style={styles.scanningText}>Scanning...</Text>
-              </View>
-            )}
+        {/* Scan frame */}
+        <View style={styles.frameContainer}>
+          <View style={styles.scanFrame}>
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
           </View>
         </View>
-      </CameraView>
+
+        {/* Bottom controls */}
+        <View style={styles.bottomSection}>
+          {!scanning ? (
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => setScanning(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="refresh" size={20} color="#fff" />
+              <Text style={styles.retryText}>Tap to Scan Again</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.scanningIndicator}>
+              <ActivityIndicator size="small" color="#4f46e5" />
+              <Text style={styles.scanningText}>Scanning...</Text>
+            </View>
+          )}
+        </View>
+      </View>
     </View>
   );
 }
@@ -155,11 +154,7 @@ const styles = StyleSheet.create({
     padding: 32,
     alignItems: "center",
     width: "100%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 5,
+    boxShadow: "0 4 16 0 rgba(0, 0, 0, 0.08)",
   },
   permissionIcon: {
     width: 88,
@@ -191,11 +186,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 28,
-    shadowColor: "#4f46e5",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    boxShadow: "0 4 8 0 rgba(79, 70, 229, 0.3)",
   },
   permissionButtonText: {
     color: "#fff",
@@ -203,7 +194,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.55)",
     justifyContent: "space-between",
   },
