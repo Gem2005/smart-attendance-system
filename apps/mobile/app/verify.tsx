@@ -107,12 +107,31 @@ export default function VerifyScreen() {
     try {
       // Upload photo
       const fileName = `${verificationData.classId}/${verificationData.sessionId}/${user.id}/${Date.now()}.jpg`;
-      const response = await fetch(photoUri);
-      const blob = await response.blob();
+
+      // Helper function to get blob from local file URI (fixes "Network request failed" on Android)
+      const getBlobFromUri = async (uri: string): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.onload = function () {
+            resolve(xhr.response);
+          };
+          xhr.onerror = function (e) {
+            reject(new Error("Failed to read photo file"));
+          };
+          xhr.responseType = "blob";
+          xhr.open("GET", uri, true);
+          xhr.send(null);
+        });
+      };
+
+      const blob = await getBlobFromUri(photoUri);
 
       const { error: uploadError } = await supabase.storage
         .from("attendance-photos")
-        .upload(fileName, blob, { contentType: "image/jpeg" });
+        .upload(fileName, blob, {
+          contentType: "image/jpeg",
+          upsert: true,
+        });
 
       if (uploadError) throw uploadError;
 
