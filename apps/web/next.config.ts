@@ -11,8 +11,14 @@ const nextConfig: NextConfig = {
 				protocol: "https",
 				hostname: "eohrufcxrdflbxdrzsdm.supabase.co",
 				port: "",
+				pathname: "/storage/v1/object/sign/attendance-photos/**",
+			},
+			{
+				protocol: "https",
+				hostname: "eohrufcxrdflbxdrzsdm.supabase.co",
+				port: "",
 				pathname: "/storage/v1/object/sign/attendance-proofs/**",
-			}
+			},
 		]
 	}
 };

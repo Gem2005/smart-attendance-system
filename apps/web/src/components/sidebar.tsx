@@ -45,7 +45,7 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r bg-sidebar text-sidebar-foreground">
+    <aside className="flex h-full w-full md:w-64 flex-col border-r bg-sidebar text-sidebar-foreground">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-5">
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">

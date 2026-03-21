@@ -1,5 +1,8 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+
+// Module-level singleton cache keyed by token to prevent multiple GoTrueClient instances
+const clientCache = new Map<string, SupabaseClient<Database>>();
 
 export function createClient(customToken?: string) {
   let token: string | undefined = customToken;
@@ -11,7 +14,13 @@ export function createClient(customToken?: string) {
     }
   }
 
-  return createSupabaseClient<Database>(
+  const cacheKey = token ?? "__anon__";
+  
+  if (clientCache.has(cacheKey)) {
+    return clientCache.get(cacheKey)!;
+  }
+
+  const client = createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -25,4 +34,7 @@ export function createClient(customToken?: string) {
       }
     }
   );
+
+  clientCache.set(cacheKey, client);
+  return client;
 }

@@ -107,11 +107,9 @@ export function AttendanceTab({ classId, token }: { classId: string; token?: str
       .limit(50);
 
     setSessions(data ?? []);
-    if (data && data.length > 0 && !selectedSession) {
-      setSelectedSession(data[0].id);
-    }
+    // Don't auto-select — only show records when the user picks a date/session
     setLoading(false);
-  }, [classId, supabase, selectedSession]);
+  }, [classId, supabase]);
 
   const fetchRecords = useCallback(async () => {
     if (!selectedSession) return;
@@ -231,6 +229,21 @@ export function AttendanceTab({ classId, token }: { classId: string; token?: str
     ? sessions.filter((s) => s.session_date === dateFilter)
     : sessions;
 
+  useEffect(() => {
+    if (!dateFilter) {
+      // No date filter — clear everything
+      setSelectedSession(null);
+      setRecords([]);
+    } else if (filteredSessions.length === 0) {
+      // Date chosen but no sessions on that day
+      setSelectedSession(null);
+      setRecords([]);
+    } else if (!filteredSessions.find(s => s.id === selectedSession)) {
+      // Date chosen and sessions exist — auto-select first
+      setSelectedSession(filteredSessions[0].id);
+    }
+  }, [dateFilter]);
+
   const statusColor = (status: string) => {
     switch (status) {
       case "present":
@@ -286,9 +299,16 @@ export function AttendanceTab({ classId, token }: { classId: string; token?: str
               onValueChange={setSelectedSession}
             >
               <SelectTrigger className="w-full sm:w-72">
-                <SelectValue placeholder="Select a session" />
+                <SelectValue placeholder="Select a session">
+                  {selectedSession 
+                    ? (() => {
+                        const s = sessions.find((x) => x.id === selectedSession);
+                        return s ? `${format(new Date(s.started_at), "MMM d, yyyy h:mm a")} ${s.is_active ? "(Active)" : ""}` : "Select a session";
+                      })()
+                    : "Select a session"}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom" align="start">
                 {filteredSessions.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {format(new Date(s.started_at), "MMM d, yyyy h:mm a")}
@@ -304,21 +324,22 @@ export function AttendanceTab({ classId, token }: { classId: string; token?: str
                 No records for this session yet.
               </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Roll No.</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>GPS</TableHead>
-                    <TableHead>WiFi</TableHead>
-                    <TableHead>Photo</TableHead>
-                    <TableHead>By</TableHead>
-                    <TableHead className="w-[60px]">Edit</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <div className="overflow-x-auto w-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Roll No.</TableHead>
+                      <TableHead className="whitespace-nowrap">Name</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Time</TableHead>
+                      <TableHead className="whitespace-nowrap">GPS</TableHead>
+                      <TableHead className="whitespace-nowrap">WiFi</TableHead>
+                      <TableHead className="whitespace-nowrap">Photo</TableHead>
+                      <TableHead className="whitespace-nowrap">By</TableHead>
+                      <TableHead className="w-[60px] whitespace-nowrap">Edit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {records.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="font-medium">
@@ -389,6 +410,7 @@ export function AttendanceTab({ classId, token }: { classId: string; token?: str
                   ))}
                 </TableBody>
               </Table>
+            </div>
             )}
           </div>
         )}

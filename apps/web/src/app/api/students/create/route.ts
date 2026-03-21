@@ -87,35 +87,36 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // Generate a dummy email if none is provided, as DB requires it
+  const finalEmail = email || `${rollNumber.toLowerCase()}@student.local`;
+
   // Check if email already exists
-  if (email) {
-    const { data: existingByEmail } = await adminClient
-      .from("students")
-      .select("id")
-      .eq("email", email)
-      .single();
+  const { data: existingByEmail } = await adminClient
+    .from("students")
+    .select("id")
+    .eq("email", finalEmail)
+    .single();
 
-    if (existingByEmail) {
-      if (classId) {
-        const { error: enrollError } = await adminClient
-          .from("class_enrollments")
-          .insert({ class_id: classId, student_id: existingByEmail.id });
+  if (existingByEmail) {
+    if (classId) {
+      const { error: enrollError } = await adminClient
+        .from("class_enrollments")
+        .insert({ class_id: classId, student_id: existingByEmail.id });
 
-        if (enrollError && enrollError.code !== "23505") {
-          return NextResponse.json({ error: enrollError.message }, { status: 400 });
-        }
+      if (enrollError && enrollError.code !== "23505") {
+        return NextResponse.json({ error: enrollError.message }, { status: 400 });
       }
-
-      return NextResponse.json({
-        student: existingByEmail,
-        message: "Student already exists, enrolled in class",
-      });
     }
+
+    return NextResponse.json({
+      student: existingByEmail,
+      message: "Student already exists, enrolled in class",
+    });
   }
 
   // Create student profile
   const { data: profileData, error: profileError } = await adminClient.from("students").insert({
-    email: email || null,
+    email: finalEmail,
     full_name: fullName,
     roll_number: rollNumber,
     phone: phone || null,
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({
-    student: { id: profileData.id, email: email || null, full_name: fullName, roll_number: rollNumber },
+    student: { id: profileData.id, email: finalEmail, full_name: fullName, roll_number: rollNumber },
     message: "Student account created successfully",
   });
 }

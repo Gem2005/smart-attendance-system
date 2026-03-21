@@ -133,7 +133,7 @@ export default function HistoryScreen() {
         const response = await fetch(uri);
         const blob = await response.blob();
         const { data, error } = await supabase.storage
-          .from("attendance-proofs")
+          .from("attendance-photos")
           .upload(fileName, blob, { contentType: "image/jpeg" });
         
         if (error) throw error;

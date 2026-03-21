@@ -345,17 +345,18 @@ export function StudentsTab({ classId, token }: { classId: string; token?: strin
             No students enrolled yet.
           </p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Roll No.</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <div className="overflow-x-auto w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">Roll No.</TableHead>
+                  <TableHead className="whitespace-nowrap">Name</TableHead>
+                  <TableHead className="whitespace-nowrap">Email</TableHead>
+                  <TableHead className="whitespace-nowrap">Phone</TableHead>
+                  <TableHead className="w-[100px] whitespace-nowrap">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
               {students.map((student) => (
                 <TableRow key={student.id}>
                   <TableCell className="font-medium">
@@ -402,6 +403,7 @@ export function StudentsTab({ classId, token }: { classId: string; token?: strin
               ))}
             </TableBody>
           </Table>
+        </div>
         )}
       </CardContent>
 

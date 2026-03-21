@@ -68,7 +68,7 @@ export function TicketsClient({ initialRequests }: { initialRequests: RequestIte
     try {
       const signedUrls = await Promise.all(
         urls.map(async (url) => {
-          const { data } = await supabase.storage.from("attendance-proofs").createSignedUrl(url, 300);
+          const { data } = await supabase.storage.from("attendance-photos").createSignedUrl(url, 300);
           return data?.signedUrl || "";
         })
       );
