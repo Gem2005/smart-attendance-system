@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Try finding the student by email or roll_number
     const { data: student, error } = await adminClient
       .from("students")
-      .select("id, email, roll_number, full_name, encrypted_password")
+      .select("id, email, roll_number, full_name, phone, encrypted_password")
       .or(`email.eq.${identifier},roll_number.eq.${identifier}`)
       .single();
 
@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
         email: student.email,
         full_name: student.full_name,
         roll_number: student.roll_number,
+        phone: student.phone,
       }
     });
     

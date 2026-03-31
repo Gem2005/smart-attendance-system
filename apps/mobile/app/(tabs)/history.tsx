@@ -359,11 +359,17 @@ export default function HistoryScreen() {
 
       for (const uri of reportPhotos) {
         const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
-        const response = await fetch(uri);
-        const blob = await response.blob();
+        
+        const formData = new FormData();
+        formData.append("file", {
+          uri: uri,
+          name: fileName.split("/").pop(),
+          type: "image/jpeg",
+        } as any);
+
         const { data, error } = await supabase.storage
-          .from("attendance-photos")
-          .upload(fileName, blob, { contentType: "image/jpeg" });
+          .from("attendance-proofs")
+          .upload(fileName, formData, { contentType: "image/jpeg" });
         
         if (error) throw error;
         if (data?.path) {

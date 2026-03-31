@@ -41,9 +41,13 @@ async function checkTiming(classId: string): Promise<void> {
     .eq("class_id", classId)
     .eq("day_of_week", dayOfWeek);
 
-  if (error) throw new Error("Failed to fetch class schedule");
+  if (error) {
+    console.error("Schedule fetch error:", error.message);
+    throw new Error(`Failed to fetch class schedule: ${error.message}`);
+  }
   if (!schedules || schedules.length === 0) {
-    throw new Error("No class scheduled for today");
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    throw new Error(`No class scheduled for ${dayNames[dayOfWeek]}`);
   }
 
   const buffer = CLASS_TIME_BUFFER_MINUTES;
@@ -56,7 +60,9 @@ async function checkTiming(classId: string): Promise<void> {
   });
 
   if (!isWithinAnySlot) {
-    throw new Error("Class is not currently in session");
+    const scheduleStr = schedules.map(s => `${s.start_time}-${s.end_time}`).join(", ");
+    const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    throw new Error(`Class not in session. Schedule: ${scheduleStr}, Current time: ${currentTime} (±${buffer}min buffer)`);
   }
 }
 

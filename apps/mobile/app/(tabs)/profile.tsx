@@ -51,7 +51,7 @@ export default function ProfileScreen() {
           .from("students")
           .select("full_name, email, roll_number, phone")
           .eq("id", user!.id)
-          .single();
+          .maybeSingle();
 
         if (student) {
           setProfile(student);
@@ -59,12 +59,14 @@ export default function ProfileScreen() {
           console.warn("Profile fetch error:", error.message);
         }
 
-        const { count } = await supabase
+        const { count, error: countError } = await supabase
           .from("class_enrollments")
           .select("*", { count: "exact", head: true })
           .eq("student_id", user!.id);
 
-        setClassCount(count ?? 0);
+        if (!countError) {
+          setClassCount(count ?? 0);
+        }
       } catch (err) {
         console.error("Failed to load profile details", err);
       }
