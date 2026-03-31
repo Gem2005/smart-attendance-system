@@ -11,6 +11,36 @@ A multi-layered anti-proxy attendance system with QR + Geofencing + WiFi SSID ve
 
 ---
 
+## Vision Document
+
+### Project Overview
+**Name:** Smart Attendance System
+**Problem it Solves:** Traditional roll-calls are time-consuming, and existing digital solutions (like simple QR codes) are easily manipulated for proxy attendance via screenshot sharing or remote scanning.
+**Target Users (Personas):** 
+1. **Teacher/Faculty:** Needs to quickly take verifiable attendance, monitor live stats, and manage class records without wasting teaching time.
+2. **Student:** Needs a frictionless way to mark their presence securely using their own smartphone.
+3. **Admin:** Needs to oversee system usage and manage top-level configuration.
+
+### Vision Statement
+To provide a highly secure, location-aware, and proxy-proof digital attendance application that eliminates manual roll-calls while ensuring 100% attendance integrity through a seamless multi-layered verification chain (Time + QR + GPS + WiFi + Photo).
+
+### Key Features & Goals
+- **Multi-Factor Verification:** Dynamic QR, Geofencing, WiFi SSID matching, and selfie capture.
+- **Auto-rotating QR:** Changes every 30 seconds to prevent barcode scraping/sharing.
+- **Real-time Dashboard:** Teachers see live attendance updates as students scan.
+- **Data Isolation:** Teachers only see their classes; students only see their own attendance logs.
+
+### Success Metrics
+- 100% elimination of proxy attendance in deployed classrooms.
+- < 15 seconds average time for a student to successfully mark attendance.
+- 99.9% system uptime and reliable verification within campus bounds.
+
+### Assumptions & Constraints
+- **Assumptions:** Students possess a smartphone with a working camera, GPS, and WiFi. Classrooms have steady internet and at least one verifiable WiFi SSID.
+- **Constraints:** Network reliability in certain campus dead zones; iOS platform restrictions on ambient WiFi SSID scanning (requiring fallbacks).
+
+---
+
 ## Table of Contents
 
 1. [Attendance Flow](#1-attendance-flow)
@@ -584,24 +614,61 @@ EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 ```
 
+## Local Development & Branching
+
+### Repository Folder Structure
+The repository is organized as a monorepo using `pnpm` workspaces:
+- `apps/web`: Next.js frontend for teachers.
+- `apps/mobile`: Expo React Native mobile app for students.
+- `packages/supabase`: Database types and migrations.
+
+### Branching Strategy (GitHub Flow)
+We follow the standard GitHub Flow:
+- `main`: The main branch is always stable, deployable, and production-ready.
+- `feature/*` (e.g., `feature/add-docker`, `feature/auth-screens`): Created off `main` for developing new features. 
+- `bugfix/*` or `hotfix/*`: For fixing system issues.
+All branches must be merged into `main` via Pull Requests. 
+
+### Local Development Tools
+- **Code Editor:** VS Code (Extensions: ESLint, Prettier, Tailwind CSS, Docker).
+- **Package Manager:** `pnpm` (v8+).
+- **Subsystem Orchestration:** Docker & Docker Desktop for containerized environments.
+- **Mobile Emulation:** Expo Go app natively, Android Studio Emulator, or iOS Simulator.
+- **Database Local Dev:** Supabase CLI.
+
 ---
 
-## Quick Start (after setup)
+## Quick Start – Local Development
+
+You can run the web architecture locally using Docker, which is pre-configured via `docker-compose`.
 
 ```bash
-# Install dependencies
+# 1. Clone the repository
+git clone <your-repo-url>
+cd smart-attendance-system
+
+# 2. Make sure Docker Desktop is open and running!
+
+# 3. Start the web application environment via Docker
+docker compose up --build -d
+
+# 4. View application startup logs to ensure Next.js is "Ready"
+docker compose logs -f web
+
+# 5. Access the app
+# Open http://localhost:3000 in your browser
+```
+
+### Developing the Mobile App Locally
+*(Note: Excluded from Docker as React Native requires native mobile toolchains)*
+```bash
+# Install repo dependencies
 pnpm install
 
-# Start Supabase locally
-npx supabase start
-
-# Run web app
-pnpm --filter web dev
-
-# Run mobile app
+# Start the Expo bundler
 pnpm --filter mobile start
 ```
 
 ---
 
-**We will follow Phase 0 → Phase 8 sequentially. Each phase will be a PR/commit boundary.**
+**We follow Phase 0 → Phase 8 sequentially. Each phase represents a PR/commit boundary.**
