@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
 import type { QRPayload } from "@/types/qr";
 import {
@@ -44,6 +45,27 @@ const STATUS_CONFIG: Record<string, { name: keyof typeof Ionicons.glyphMap; colo
   failed: { name: "close-circle", color: "#ef4444", bg: "#fef2f2", label: "Failed" },
   skipped: { name: "remove-circle", color: "#8b5cf6", bg: "#f5f3ff", label: "Skipped" },
 };
+
+function getMimeTypeFromUri(uri: string): string {
+  const normalized = uri.split("?")[0].toLowerCase();
+  if (normalized.endsWith(".png")) return "image/png";
+  if (normalized.endsWith(".webp")) return "image/webp";
+  if (normalized.endsWith(".heic")) return "image/heic";
+  if (normalized.endsWith(".heif")) return "image/heif";
+  return "image/jpeg";
+}
+
+function getExtensionFromMimeType(mimeType: string): string {
+  const ext = mimeType.split("/")[1];
+  if (!ext) return "jpg";
+  if (ext === "jpeg") return "jpg";
+  return ext;
+}
+
+async function fileUriToArrayBuffer(uri: string): Promise<ArrayBuffer> {
+  const file = new FileSystem.File(uri);
+  return file.arrayBuffer();
+}
 
 export default function VerifyScreen() {
   const { payload: payloadStr } = useLocalSearchParams<{ payload: string }>();
@@ -113,16 +135,15 @@ export default function VerifyScreen() {
       }
 
       // Upload photo
-      const fileName = `${classId}/${sessionId}/${user.id}/${Date.now()}.jpg`;
-
-      // Supabase Storage upload expects raw bytes, not multipart FormData.
-      const imageResponse = await fetch(photoUri);
-      const imageBlob = await imageResponse.blob();
+      const contentType = getMimeTypeFromUri(photoUri);
+      const extension = getExtensionFromMimeType(contentType);
+      const fileName = `${classId}/${sessionId}/${user.id}/${Date.now()}.${extension}`;
+      const imageBuffer = await fileUriToArrayBuffer(photoUri);
 
       const { error: uploadError } = await supabase.storage
         .from("attendance-photos")
-        .upload(fileName, imageBlob, {
-          contentType: "image/jpeg",
+        .upload(fileName, imageBuffer, {
+          contentType,
           upsert: true,
         });
 

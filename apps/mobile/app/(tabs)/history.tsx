@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/auth";
 import { useTabSwipe } from "@/lib/use-tab-swipe";
@@ -28,6 +29,27 @@ function resolveApiUrl(): string {
     return DEFAULT_API_URL;
   }
   return configuredUrl || DEFAULT_API_URL;
+}
+
+function getMimeTypeFromUri(uri: string): string {
+  const normalized = uri.split("?")[0].toLowerCase();
+  if (normalized.endsWith(".png")) return "image/png";
+  if (normalized.endsWith(".webp")) return "image/webp";
+  if (normalized.endsWith(".heic")) return "image/heic";
+  if (normalized.endsWith(".heif")) return "image/heif";
+  return "image/jpeg";
+}
+
+function getExtensionFromMimeType(mimeType: string): string {
+  const ext = mimeType.split("/")[1];
+  if (!ext) return "jpg";
+  if (ext === "jpeg") return "jpg";
+  return ext;
+}
+
+async function fileUriToArrayBuffer(uri: string): Promise<ArrayBuffer> {
+  const file = new FileSystem.File(uri);
+  return file.arrayBuffer();
 }
 
 interface AttendanceItem {
@@ -444,14 +466,14 @@ export default function HistoryScreen() {
       const uploadedUrls: string[] = [];
 
       for (const uri of reportPhotos) {
-        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
-
-        const imageResponse = await fetch(uri);
-        const imageBlob = await imageResponse.blob();
+        const contentType = getMimeTypeFromUri(uri);
+        const extension = getExtensionFromMimeType(contentType);
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
+        const imageBuffer = await fileUriToArrayBuffer(uri);
 
         const { data, error } = await supabase.storage
           .from("attendance-proofs")
-          .upload(fileName, imageBlob, { contentType: "image/jpeg" });
+          .upload(fileName, imageBuffer, { contentType });
         
         if (error) {
           console.error("attendance-proofs upload error", { fileName, error });
