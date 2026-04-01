@@ -359,19 +359,20 @@ export default function HistoryScreen() {
 
       for (const uri of reportPhotos) {
         const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
-        
-        const formData = new FormData();
-        formData.append("file", {
-          uri: uri,
-          name: fileName.split("/").pop(),
-          type: "image/jpeg",
-        } as any);
+
+        // Supabase Storage upload expects raw bytes, not multipart FormData.
+        const imageResponse = await fetch(uri);
+        const imageBlob = await imageResponse.blob();
 
         const { data, error } = await supabase.storage
           .from("attendance-proofs")
-          .upload(fileName, formData, { contentType: "image/jpeg" });
+          .upload(fileName, imageBlob, { contentType: "image/jpeg" });
         
-        if (error) throw error;
+        if (error) {
+          console.error("attendance-proofs upload error", { fileName, error });
+          const debug = JSON.stringify(error);
+          throw new Error(error.message ? `${error.message} (${debug})` : debug);
+        }
         if (data?.path) {
           uploadedUrls.push(data.path);
         }

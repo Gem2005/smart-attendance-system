@@ -23,7 +23,6 @@ import {
 import { Camera, Check, Link as LinkIcon, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import Image from "next/image";
 
 interface RequestItem {
   id: string;
@@ -68,8 +67,18 @@ export function TicketsClient({ initialRequests }: { initialRequests: RequestIte
     try {
       const signedUrls = await Promise.all(
         urls.map(async (url) => {
-          const { data } = await supabase.storage.from("attendance-photos").createSignedUrl(url, 300);
-          return data?.signedUrl || "";
+          // Proof uploads are stored in attendance-proofs. Keep a fallback for legacy rows.
+          const { data: proofData } = await supabase.storage
+            .from("attendance-proofs")
+            .createSignedUrl(url, 300);
+
+          if (proofData?.signedUrl) return proofData.signedUrl;
+
+          const { data: legacyData } = await supabase.storage
+            .from("attendance-photos")
+            .createSignedUrl(url, 300);
+
+          return legacyData?.signedUrl || "";
         })
       );
       setPreviewImages(signedUrls.filter(Boolean));
@@ -286,7 +295,8 @@ export function TicketsClient({ initialRequests }: { initialRequests: RequestIte
           <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
             {previewImages.map((src, i) => (
               <div key={i} className="relative w-full aspect-[4/3]">
-                <Image src={src} alt="Proof" fill className="rounded-lg border object-contain" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="Proof" className="h-full w-full rounded-lg border object-contain" />
               </div>
             ))}
           </div>

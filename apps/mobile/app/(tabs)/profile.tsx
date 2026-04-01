@@ -21,6 +21,16 @@ interface StudentProfile {
   phone: string | null;
 }
 
+const DEFAULT_API_URL = "http://localhost:3000/api";
+
+function resolveApiUrl(): string {
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (__DEV__ && (!configuredUrl || /vercel\.app/i.test(configuredUrl))) {
+    return DEFAULT_API_URL;
+  }
+  return configuredUrl || DEFAULT_API_URL;
+}
+
 export default function ProfileScreen() {
   const { user, token, signOut } = useAuth();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -99,7 +109,7 @@ export default function ProfileScreen() {
     setChangingPassword(true);
     
     try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api";
+      const API_URL = resolveApiUrl();
       const isAndroid = Platform.OS === "android";
       const normalizedUrl = isAndroid ? API_URL.replace('localhost', '10.0.2.2') : API_URL;
 

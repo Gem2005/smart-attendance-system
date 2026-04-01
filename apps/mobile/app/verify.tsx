@@ -106,32 +106,38 @@ export default function VerifyScreen() {
     setSubmitting(true);
 
     try {
-      // Upload photo
-      const fileName = `${verificationData.classId}/${verificationData.sessionId}/${user.id}/${Date.now()}.jpg`;
+      const classId = verificationData.classId;
+      const sessionId = verificationData.sessionId;
+      if (!classId || !sessionId) {
+        throw new Error("Missing class/session context for photo upload.");
+      }
 
-      // Use FormData for reliable file uploads in React Native
-      const formData = new FormData();
-      formData.append("file", {
-        uri: photoUri,
-        name: fileName.split("/").pop(),
-        type: "image/jpeg",
-      } as any);
+      // Upload photo
+      const fileName = `${classId}/${sessionId}/${user.id}/${Date.now()}.jpg`;
+
+      // Supabase Storage upload expects raw bytes, not multipart FormData.
+      const imageResponse = await fetch(photoUri);
+      const imageBlob = await imageResponse.blob();
 
       const { error: uploadError } = await supabase.storage
         .from("attendance-photos")
-        .upload(fileName, formData, {
+        .upload(fileName, imageBlob, {
           contentType: "image/jpeg",
           upsert: true,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        const debug = JSON.stringify(uploadError);
+        console.error("attendance-photos upload error", { fileName, uploadError });
+        throw new Error(uploadError.message ? `${uploadError.message} (${debug})` : debug);
+      }
 
       // Submit attendance record
       const { error: insertError } = await supabase
         .from("attendance_records")
         .insert({
-          session_id: verificationData.sessionId,
-          class_id: verificationData.classId,
+          session_id: sessionId,
+          class_id: classId,
           student_id: user.id,
           status: "present",
           scanned_at: new Date().toISOString(),

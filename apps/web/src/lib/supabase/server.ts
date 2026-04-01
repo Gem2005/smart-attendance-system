@@ -1,11 +1,26 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import type { Database } from "@/types/database";
 import { verifySessionJwt } from "@/lib/auth/session";
 
-export async function getUser() {
+function extractBearerToken(authorizationHeader: string | null): string | null {
+  if (!authorizationHeader) return null;
+  const match = authorizationHeader.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] ?? null;
+}
+
+async function resolveAuthToken(): Promise<string | null> {
+  const headerStore = await headers();
+  const bearerToken = extractBearerToken(headerStore.get("authorization"));
+  if (bearerToken) return bearerToken;
+
   const cookieStore = await cookies();
-  const token = cookieStore.get("sas-auth-token")?.value;
+  return cookieStore.get("sas-auth-token")?.value ?? null;
+}
+
+export async function getUser() {
+  const token = await resolveAuthToken();
   if (!token) return null;
   const payload = await verifySessionJwt(token);
   if (!payload) return null;
@@ -19,7 +34,7 @@ export async function getUser() {
 
 export async function createClient() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("sas-auth-token")?.value;
+  const token = await resolveAuthToken();
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

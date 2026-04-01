@@ -1,10 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { supabase } from "@/lib/supabase";
+import { setSupabaseAccessToken, supabase } from "@/lib/supabase";
 
 const TOKEN_KEY = "sas-auth-token";
 const USER_KEY = "sas-auth-user";
+const DEFAULT_API_URL = "http://localhost:3000/api";
+
+function resolveApiUrl(): string {
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (__DEV__ && (!configuredUrl || /vercel\.app/i.test(configuredUrl))) {
+    return DEFAULT_API_URL;
+  }
+  return configuredUrl || DEFAULT_API_URL;
+}
 
 export interface AuthUser {
   id: string;
@@ -59,12 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           
           setSession(newSession);
-
-          // Sync with Supabase client
-          await supabase.auth.setSession({
-            access_token: storedToken,
-            refresh_token: "", // Custom auth might not provide refresh token
-          });
+          setSupabaseAccessToken(storedToken);
         }
       } catch (err) {
         console.error("Failed to restore session", err);
@@ -77,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function signIn(identifier: string, password: string) {
-    const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api";
+    const API_URL = resolveApiUrl();
 
     // Convert localhost to Android emulator address
     const isAndroid = Platform.OS === "android";
@@ -101,15 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: data.user,
     };
 
-    // Sync with Supabase client before persisting
-    const { error: sbError } = await supabase.auth.setSession({
-      access_token: data.access_token,
-      refresh_token: "",
-    });
-
-    if (sbError) {
-      console.warn("Supabase session sync failed", sbError.message);
-    }
+    // Bridge custom JWT into Supabase requests.
+    setSupabaseAccessToken(data.access_token);
 
     // Persist to AsyncStorage
     await AsyncStorage.multiSet([
@@ -122,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signOut() {
     await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+    setSupabaseAccessToken(null);
     await supabase.auth.signOut();
     setSession(null);
   }

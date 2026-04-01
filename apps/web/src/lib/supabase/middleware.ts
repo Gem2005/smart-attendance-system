@@ -1,10 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionJwt } from "@/lib/auth/session";
 
+function extractBearerToken(authorizationHeader: string | null): string | null {
+  if (!authorizationHeader) return null;
+  const match = authorizationHeader.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] ?? null;
+}
+
 export async function updateSession(request: NextRequest) {
   const supabaseResponse = NextResponse.next({ request });
 
-  const token = request.cookies.get("sas-auth-token")?.value;
+  const token =
+    extractBearerToken(request.headers.get("authorization")) ||
+    request.cookies.get("sas-auth-token")?.value;
   let user = null;
   
   if (token) {
@@ -60,8 +68,17 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
     
-    // Prevent students from accessing teacher APIs
-    if (isApiRoute && !isAuthApi && !pathname.startsWith("/api/qr/scan")) {
+    const studentAllowedApiRoutes = [
+      "/api/students/update-password",
+    ];
+
+    // Prevent students from accessing teacher APIs while allowing student-safe routes.
+    if (
+      isApiRoute &&
+      !isAuthApi &&
+      !pathname.startsWith("/api/qr/scan") &&
+      !studentAllowedApiRoutes.some((route) => pathname.startsWith(route))
+    ) {
       return NextResponse.json({ error: "Forbidden: Teacher access required" }, { status: 403 });
     }
   }
