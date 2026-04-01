@@ -83,6 +83,7 @@ export async function updateSession(request: NextRequest) {
       "/api/students/update-password",
       "/api/students/tickets/close",
       "/api/students/tickets/list",
+      "/api/students/history",
     ];
 
     // Prevent students from accessing teacher APIs while allowing student-safe routes.

@@ -55,6 +55,14 @@ export function TicketsClient({ initialRequests }: { initialRequests: RequestIte
 
   const supabase = createClient();
 
+  // Helper function to get display status
+  const getDisplayStatus = (req: RequestItem) => {
+    if (req.status === "rejected" && req.teacher_notes === "Closed by student") {
+      return "closed";
+    }
+    return req.status;
+  };
+
   const handleOpenResolve = (req: RequestItem) => {
     setSelectedRequest(req);
     setNewStatus("approved");
@@ -154,14 +162,22 @@ export function TicketsClient({ initialRequests }: { initialRequests: RequestIte
                 </div>
                 <Badge
                   variant={
-                    req.status === "approved"
-                      ? "default"
-                      : req.status === "rejected"
-                      ? "destructive"
-                      : "secondary"
+                    (() => {
+                      const displayStatus = getDisplayStatus(req);
+                      return displayStatus === "approved"
+                        ? "default"
+                        : displayStatus === "closed"
+                          ? "outline"
+                          : displayStatus === "rejected"
+                            ? "destructive"
+                            : "secondary";
+                    })()
                   }
                 >
-                  {req.status}
+                  {(() => {
+                    const displayStatus = getDisplayStatus(req);
+                    return displayStatus === "closed" ? "Closed by student" : displayStatus;
+                  })()}
                 </Badge>
               </div>
             </CardHeader>

@@ -20,6 +20,16 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/auth";
 import { useTabSwipe } from "@/lib/use-tab-swipe";
 
+const DEFAULT_API_URL = "http://localhost:3000/api";
+
+function resolveApiUrl(): string {
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (__DEV__ && (!configuredUrl || /vercel\.app/i.test(configuredUrl))) {
+    return DEFAULT_API_URL;
+  }
+  return configuredUrl || DEFAULT_API_URL;
+}
+
 interface AttendanceItem {
   id: string;
   status: "present" | "absent" | "manual";
@@ -30,18 +40,29 @@ interface AttendanceItem {
   session_date: string;
   class_id: string;
   session_id: string;
+  teacher_name?: string;
+  gps_latitude?: number | null;
+  gps_longitude?: number | null;
+  geofence_passed?: boolean | null;
+  wifi_ssid_found?: string | null;
+  wifi_passed?: boolean | null;
+  photo_url?: string | null;
+  marked_by?: string | null;
+  notes?: string | null;
 }
 
 interface EnrolledClass {
   class_id: string;
   class_name: string;
   class_code: string;
+  teacher_name?: string;
 }
 
 interface ClassGroup {
   class_id: string;
   class_name: string;
   class_code: string;
+  teacher_name?: string;
   last_status: "present" | "absent" | "manual" | null;
   last_date: string | null;
   last_scanned_at: string | null;
@@ -107,8 +128,8 @@ const formatTime = (dateString: string | null) => {
   }
 };
 
-
-function SessionItem({ item, onReport }: { item: AttendanceItem; onReport: (item: AttendanceItem) => void }) {
+function SessionItem({ item, onReport, onPhotoPress }: { item: AttendanceItem; onReport: (item: AttendanceItem) => void; onPhotoPress: (url: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
   const config = statusConfig[item.status] || statusConfig.manual;
   const formattedDate = formatDate(item.session_date || item.created_at);
   const formattedTime = formatTime(item.scanned_at);
@@ -116,7 +137,11 @@ function SessionItem({ item, onReport }: { item: AttendanceItem; onReport: (item
   return (
     <View style={styles.card}>
       <View style={[styles.cardLeft, { backgroundColor: config.color }]} />
-      <View style={styles.cardContent}>
+      <TouchableOpacity 
+        style={styles.cardContent}
+        activeOpacity={0.7}
+        onPress={() => setExpanded(!expanded)}
+      >
         <View style={styles.cardTop}>
           <Text style={styles.sessionDate} numberOfLines={1}>
             {formattedDate}
@@ -141,12 +166,63 @@ function SessionItem({ item, onReport }: { item: AttendanceItem; onReport: (item
           </View>
           <TouchableOpacity 
             style={styles.reportBtn} 
-            onPress={() => onReport(item)}
+            onPress={(e) => { e.stopPropagation(); onReport(item); }}
           >
             <Text style={styles.reportBtnText}>Report</Text>
           </TouchableOpacity>
         </View>
-      </View>
+        
+        {expanded && (
+          <View style={styles.expandedDetails}>
+            {!!item.teacher_name && (
+              <View style={styles.detailRow}>
+                <Ionicons name="person-circle-outline" size={16} color="#6b7280" style={{marginRight: 6}} />
+                <Text style={styles.detailText}>Teacher: {item.teacher_name}</Text>
+              </View>
+            )}
+            {!!item.marked_by && (
+              <View style={styles.detailRow}>
+                <Ionicons name="create-outline" size={16} color="#6b7280" style={{marginRight: 6}} />
+                <Text style={styles.detailText}>Marked By: {item.marked_by}</Text>
+              </View>
+            )}
+            {item.geofence_passed !== null && item.geofence_passed !== undefined && (
+              <View style={styles.detailRow}>
+                <Ionicons name="location-outline" size={16} color={item.geofence_passed ? "#059669" : "#dc2626"} style={{marginRight: 6}} />
+                <Text style={[styles.detailText, { color: item.geofence_passed ? "#059669" : "#dc2626" }]}>
+                  Geofence: {item.geofence_passed ? "Passed" : "Failed"}
+                </Text>
+              </View>
+            )}
+            {item.wifi_passed !== null && item.wifi_passed !== undefined && (
+              <View style={styles.detailRow}>
+                <Ionicons name="wifi-outline" size={16} color={item.wifi_passed ? "#059669" : "#dc2626"} style={{marginRight: 6}} />
+                <Text style={[styles.detailText, { color: item.wifi_passed ? "#059669" : "#dc2626" }]}>
+                  WiFi: {item.wifi_passed ? "Verified" : "Failed"} {item.wifi_ssid_found && `(${item.wifi_ssid_found})`}
+                </Text>
+              </View>
+            )}
+            {!!item.notes && (
+              <View style={styles.detailRow}>
+                <Ionicons name="document-text-outline" size={16} color="#6b7280" style={{marginRight: 6}} />
+                <Text style={styles.detailText}>Notes: {item.notes}</Text>
+              </View>
+            )}
+            {!!item.photo_url && (
+              <TouchableOpacity
+                onPress={() => onPhotoPress(item.photo_url!)}
+                activeOpacity={0.7}
+              >
+                <Image 
+                  source={{ uri: item.photo_url }} 
+                  style={styles.photoPreviewSquare}
+                  onError={() => console.warn("Failed to load photo:", item.photo_url)}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -167,6 +243,9 @@ function ClassCard({ item, onPress }: { item: ClassGroup; onPress: (id: string) 
         <View style={styles.classInfo}>
           <Text style={styles.classNameText} numberOfLines={1}>{item.class_name}</Text>
           <Text style={styles.classCodeText}>{item.class_code}</Text>
+          {!!item.teacher_name && (
+            <Text style={styles.teacherText}><Ionicons name="person-outline" size={12} /> {item.teacher_name}</Text>
+          )}
         </View>
         <View style={styles.percentageContainer}>
           <Text style={[styles.percentageText, { color: percentageColor }]}>{item.percentage}%</Text>
@@ -194,8 +273,22 @@ function ClassCard({ item, onPress }: { item: ClassGroup; onPress: (id: string) 
   );
 }
 
+function PhotoPreviewModal({ imageUrl, onClose }: { imageUrl: string | null; onClose: () => void }) {
+  if (!imageUrl) return null;
+  
+  return (
+    <View style={styles.previewOverlay}>
+      <TouchableOpacity style={styles.previewBackdrop} onPress={onClose} />
+      <TouchableOpacity style={styles.previewClose} onPress={onClose}>
+        <Ionicons name="close" size={24} color="#fff" />
+      </TouchableOpacity>
+      <Image source={{ uri: imageUrl }} style={styles.previewImage} resizeMode="contain" />
+    </View>
+  );
+}
+
 export default function HistoryScreen() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const swipeHandlers = useTabSwipe();
   const [records, setRecords] = useState<AttendanceItem[]>([]);
   const [enrolledClasses, setEnrolledClasses] = useState<EnrolledClass[]>([]);
@@ -208,65 +301,40 @@ export default function HistoryScreen() {
   const [reportDescription, setReportDescription] = useState("");
   const [reportPhotos, setReportPhotos] = useState<string[]>([]);
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const fetchRecords = useCallback(async () => {
-    if (!user?.id) return;
+    if (!token) return;
 
     try {
-      const { data: enrollments, error: enrollError } = await supabase
-        .from("class_enrollments")
-        .select(`
-          class_id,
-          classes!inner(name, code)
-        `)
-        .eq("student_id", user.id);
-
-      if (enrollError) throw enrollError;
-
-      const classes = (enrollments || []).map((e: any) => ({
-        class_id: e.class_id,
-        class_name: e.classes?.name || "Unknown",
-        class_code: e.classes?.code || "N/A",
-      }));
-      setEnrolledClasses(classes);
-
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select(`
-          id,
-          status,
-          scanned_at,
-          created_at,
-          class_id,
-          session_id,
-          attendance_sessions!inner(session_date),
-          classes!inner(name, code)
-        `)
-        .eq("student_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      if (data) {
-        setRecords(
-          data.map((r: any) => ({
-            id: r.id || Math.random().toString(),
-            status: r.status,
-            scanned_at: r.scanned_at,
-            created_at: r.created_at,
-            class_id: r.class_id,
-            session_id: r.session_id,
-            class_name: r.classes?.name ?? "",
-            class_code: r.classes?.code ?? "",
-            session_date: r.attendance_sessions?.session_date ?? "",
-          }))
-        );
+      const apiUrl = resolveApiUrl();
+      const isAndroid = Platform.OS === "android";
+      const normalizedUrl = isAndroid ? apiUrl.replace("localhost", "10.0.2.2") : apiUrl;
+      
+      const response = await fetch(`${normalizedUrl}/students/history`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch history");
       }
-
+      
+      const result = await response.json();
+      
+      if (result.enrolledClasses && result.records) {
+        setEnrolledClasses(result.enrolledClasses);
+        setRecords(result.records);
+      }
     } catch (err: any) {
       console.error("Error fetching history:", err.message);
+      Alert.alert("Error", "Failed to load attendance history");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, [user?.id]);
+  }, [token]);
 
   useEffect(() => {
     fetchRecords().finally(() => setLoading(false));
@@ -280,6 +348,7 @@ export default function HistoryScreen() {
         class_id: c.class_id,
         class_name: c.class_name,
         class_code: c.class_code,
+        teacher_name: c.teacher_name,
         last_status: null,
         last_date: null,
         last_scanned_at: null,
@@ -289,14 +358,27 @@ export default function HistoryScreen() {
     });
 
     records.forEach(record => {
-      if (groups[record.class_id]) {
-        if (groups[record.class_id].records.length === 0) {
-          groups[record.class_id].last_status = record.status;
-          groups[record.class_id].last_date = record.session_date || record.created_at;
-          groups[record.class_id].last_scanned_at = record.scanned_at;
-        }
-        groups[record.class_id].records.push(record);
+      // Ensure the group exists just in case a record has a class not in enrollments
+      if (!groups[record.class_id]) {
+        groups[record.class_id] = {
+          class_id: record.class_id,
+          class_name: record.class_name,
+          class_code: record.class_code,
+          teacher_name: record.teacher_name,
+          last_status: null,
+          last_date: null,
+          last_scanned_at: null,
+          records: [],
+          percentage: 0,
+        };
       }
+      
+      if (groups[record.class_id].records.length === 0) {
+        groups[record.class_id].last_status = record.status;
+        groups[record.class_id].last_date = record.session_date || record.created_at;
+        groups[record.class_id].last_scanned_at = record.scanned_at;
+      }
+      groups[record.class_id].records.push(record);
     });
 
     Object.values(groups).forEach(g => {
@@ -364,7 +446,6 @@ export default function HistoryScreen() {
       for (const uri of reportPhotos) {
         const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
 
-        // Supabase Storage upload expects raw bytes, not multipart FormData.
         const imageResponse = await fetch(uri);
         const imageBlob = await imageResponse.blob();
 
@@ -435,7 +516,7 @@ export default function HistoryScreen() {
           key="session-list"
           data={selectedGroup?.records || []}
           keyExtractor={(item) => item.id?.toString()}
-          renderItem={({ item }) => <SessionItem item={item} onReport={openReportModal} />}
+          renderItem={({ item }) => <SessionItem item={item} onReport={openReportModal} onPhotoPress={setPreviewImageUrl} />}
           style={styles.flatList}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
@@ -461,6 +542,8 @@ export default function HistoryScreen() {
           submitting={submittingReport}
           onSubmit={submitReport}
         />
+        
+        <PhotoPreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
       </View>
     );
   }
@@ -508,6 +591,8 @@ export default function HistoryScreen() {
           />
         }
       />
+      
+      <PhotoPreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
     </View>
   );
 }
@@ -692,6 +777,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#6b7280",
     marginTop: 2,
+  },
+  teacherText: {
+    fontSize: 13,
+    color: "#4b5563",
+    marginTop: 4,
   },
   percentageContainer: {
     alignItems: "flex-end",
@@ -964,5 +1054,65 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 15,
+  },
+  expandedDetails: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#f3f4f6",
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  detailText: {
+    fontSize: 13,
+    color: "#4b5563",
+  },
+  photoPreviewLarge: {
+    width: "100%",
+    height: 150,
+    borderRadius: 8,
+    marginTop: 8,
+    backgroundColor: "#f3f4f6",
+  },
+  photoPreviewSquare: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    marginTop: 8,
+    backgroundColor: "#f3f4f6",
+  },
+  previewOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+    zIndex: 1000,
+  },
+  previewBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  previewClose: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 1001,
+    padding: 8,
+  },
+  previewImage: {
+    width: "100%",
+    height: "80%",
+    borderRadius: 12,
   },
 });
