@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/auth";
+import { useTabSwipe } from "@/lib/use-tab-swipe";
 
 interface StudentProfile {
   full_name: string;
@@ -33,6 +34,7 @@ function resolveApiUrl(): string {
 
 export default function ProfileScreen() {
   const { user, token, signOut } = useAuth();
+  const swipeHandlers = useTabSwipe();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [classCount, setClassCount] = useState(0);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -143,7 +145,7 @@ export default function ProfileScreen() {
     : profile?.email;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scroll}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scroll} {...swipeHandlers}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.avatarRing}>

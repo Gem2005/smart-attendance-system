@@ -12,11 +12,13 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import type { QRPayload } from "@/types/qr";
+import { useTabSwipe } from "@/lib/use-tab-swipe";
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(true);
   const router = useRouter();
+  const swipeHandlers = useTabSwipe();
 
   function handleBarCodeScanned({ data }: { data: string }) {
     if (!scanning) return;
@@ -81,7 +83,7 @@ export default function ScanScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...swipeHandlers}>
       <CameraView
         style={styles.camera}
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}

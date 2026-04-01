@@ -1,11 +1,13 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { Platform, TouchableOpacity, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   
   return (
     <Tabs
@@ -72,8 +74,32 @@ export default function TabLayout() {
         options={{
           title: 'History',
           headerTitle: 'Attendance History',
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push('/tickets')}
+              style={{ marginRight: 14, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#eef2ff', borderRadius: 999 }}
+            >
+              <Text style={{ color: '#4f46e5', fontSize: 12, fontWeight: '700' }}>Your Tickets</Text>
+            </TouchableOpacity>
+          ),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="time" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="tickets"
+        options={{
+          title: 'Your Tickets',
+          headerTitle: 'Your Tickets',
+          href: null,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.replace('/history')}
+              style={{ marginLeft: 12, padding: 6 }}
+            >
+              <Ionicons name="arrow-back" size={22} color="#1a1a2e" />
+            </TouchableOpacity>
           ),
         }}
       />

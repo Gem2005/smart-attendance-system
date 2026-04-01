@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/auth";
+import { useTabSwipe } from "@/lib/use-tab-swipe";
 
 interface AttendanceItem {
   id: string;
@@ -105,6 +106,7 @@ const formatTime = (dateString: string | null) => {
     return "";
   }
 };
+
 
 function SessionItem({ item, onReport }: { item: AttendanceItem; onReport: (item: AttendanceItem) => void }) {
   const config = statusConfig[item.status] || statusConfig.manual;
@@ -194,6 +196,7 @@ function ClassCard({ item, onPress }: { item: ClassGroup; onPress: (id: string) 
 
 export default function HistoryScreen() {
   const { user } = useAuth();
+  const swipeHandlers = useTabSwipe();
   const [records, setRecords] = useState<AttendanceItem[]>([]);
   const [enrolledClasses, setEnrolledClasses] = useState<EnrolledClass[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -259,6 +262,7 @@ export default function HistoryScreen() {
           }))
         );
       }
+
     } catch (err: any) {
       console.error("Error fetching history:", err.message);
     }
@@ -413,7 +417,7 @@ export default function HistoryScreen() {
     const selectedGroup = classGroups.find(g => g.class_id === selectedClassId);
     
     return (
-      <View style={styles.container}>
+      <View style={styles.container} {...swipeHandlers}>
         <View style={styles.detailHeader}>
           <TouchableOpacity 
             style={styles.backButton} 
@@ -462,7 +466,7 @@ export default function HistoryScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...swipeHandlers}>
       <View style={styles.summaryHeader}>
         <View style={styles.summaryCard}>
           <View style={styles.summaryInfo}>

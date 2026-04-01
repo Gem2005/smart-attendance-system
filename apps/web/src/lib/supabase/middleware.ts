@@ -7,8 +7,21 @@ function extractBearerToken(authorizationHeader: string | null): string | null {
   return match?.[1] ?? null;
 }
 
+function withApiCors(response: NextResponse) {
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  return response;
+}
+
 export async function updateSession(request: NextRequest) {
   const supabaseResponse = NextResponse.next({ request });
+  const pathname = request.nextUrl.pathname;
+
+  // Browser preflight must pass before auth/role checks for cross-origin mobile web calls.
+  if (request.method === "OPTIONS" && pathname.startsWith("/api/")) {
+    return withApiCors(new NextResponse(null, { status: 204 }));
+  }
 
   const token =
     extractBearerToken(request.headers.get("authorization")) ||
@@ -27,8 +40,6 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  const pathname = request.nextUrl.pathname;
-
   // No authenticated user
   if (!user) {
     // Allow public routes
@@ -44,7 +55,7 @@ export async function updateSession(request: NextRequest) {
     
     // For API routes, return 401 instead of redirecting
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return withApiCors(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
 
     // Redirect to login
@@ -70,6 +81,8 @@ export async function updateSession(request: NextRequest) {
     
     const studentAllowedApiRoutes = [
       "/api/students/update-password",
+      "/api/students/tickets/close",
+      "/api/students/tickets/list",
     ];
 
     // Prevent students from accessing teacher APIs while allowing student-safe routes.
@@ -79,7 +92,7 @@ export async function updateSession(request: NextRequest) {
       !pathname.startsWith("/api/qr/scan") &&
       !studentAllowedApiRoutes.some((route) => pathname.startsWith(route))
     ) {
-      return NextResponse.json({ error: "Forbidden: Teacher access required" }, { status: 403 });
+      return withApiCors(NextResponse.json({ error: "Forbidden: Teacher access required" }, { status: 403 }));
     }
   }
 
